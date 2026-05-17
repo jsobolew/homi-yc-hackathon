@@ -21,16 +21,18 @@ interface OfficeViewProps {
 }
 
 const OFFICE_W = 110;
-const OFFICE_H = 84;
+const OFFICE_H = 144;
 
-// 2 rows × 3 desks — top-left corner of each homie sprite.
+// 2 rows × 3 desks. Each homie occupies sprite (28) + badge above (14) = 42px
+// vertical, so rows are spaced 48 apart to avoid the bottom badges covering the
+// top chests.
 const DESKS = [
-  { id: 0, x: 9, y: 22 },
-  { id: 1, x: 43, y: 22 },
-  { id: 2, x: 77, y: 22 },
-  { id: 3, x: 9, y: 54 },
-  { id: 4, x: 43, y: 54 },
-  { id: 5, x: 77, y: 54 },
+  { id: 0, x: 9, y: 44 },
+  { id: 1, x: 43, y: 44 },
+  { id: 2, x: 77, y: 44 },
+  { id: 3, x: 9, y: 92 },
+  { id: 4, x: 43, y: 92 },
+  { id: 5, x: 77, y: 92 },
 ];
 
 function deriveMode(homie: Homie, state: DemoState): { mode: 'phone' | 'laptop'; pulsing: boolean } {
@@ -43,11 +45,34 @@ function deriveMode(homie: Homie, state: DemoState): { mode: 'phone' | 'laptop';
   return { mode: m === 'phone' ? 'phone' : 'laptop', pulsing: false };
 }
 
+// All sponsors that should appear in the POWERED BY strip — primaries + secondaries, deduped, in homie order.
+function collectSponsors(homies: Homie[]): Array<{ key: SponsorKey; tag: string }> {
+  const out: Array<{ key: SponsorKey; tag: string }> = [];
+  const seen = new Set<SponsorKey>();
+  for (const h of homies) {
+    const def = HOMIE_HD_DEFS[h.spriteIdx];
+    if (!def) continue;
+    const last = h.name.split(' ')[1] ?? h.name;
+    const primary = def.sponsor;
+    if (primary && !seen.has(primary)) {
+      out.push({ key: primary, tag: `${last}'s homie` });
+      seen.add(primary);
+    }
+    const secondary = def.sponsorSecondary;
+    if (secondary && !seen.has(secondary)) {
+      out.push({ key: secondary, tag: `${last} · assist` });
+      seen.add(secondary);
+    }
+  }
+  return out;
+}
+
 export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: OfficeViewProps) {
   const palette = DEFAULT_PALETTE;
 
   const onCallCount = homies.filter((h) => deriveMode(h, state).mode === 'phone').length;
   const browsingCount = homies.length - onCallCount;
+  const sponsorCards = collectSponsors(homies);
 
   return (
     <div
@@ -81,7 +106,7 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
         </div>
       </div>
 
-      {/* POWERED BY sponsor strip */}
+      {/* POWERED BY sponsor strip — shows all primary + secondary sponsors, deduped */}
       <div
         style={{
           width: '100%',
@@ -102,15 +127,13 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
         >
           POWERED BY
         </div>
-        <div style={{ flex: 1, display: 'flex', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
-          {homies.map((h) => {
-            const def = HOMIE_HD_DEFS[h.spriteIdx];
-            const sponsorKey = def?.sponsor as SponsorKey | undefined;
-            const entry = sponsorKey ? SPONSORS[sponsorKey] : null;
-            if (!entry || !sponsorKey) return null;
+        <div style={{ flex: 1, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          {sponsorCards.map(({ key, tag }) => {
+            const entry = SPONSORS[key];
+            if (!entry) return null;
             return (
               <div
-                key={h.id}
+                key={key}
                 style={{
                   display: 'flex',
                   alignItems: 'center',
@@ -120,7 +143,7 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
                   border: '2px solid var(--c-line)',
                 }}
               >
-                <SponsorLogo keyName={sponsorKey} size={48} pixelated={true} />
+                <SponsorLogo keyName={key} size={44} pixelated={true} />
                 <div className="col" style={{ gap: 0 }}>
                   <div
                     className="pixel-font"
@@ -128,8 +151,8 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
                   >
                     {entry.name.toUpperCase()}
                   </div>
-                  <div className="mono-font dim" style={{ fontSize: 13 }}>
-                    {h.name.split(' ')[1]}&apos;s homie
+                  <div className="mono-font dim" style={{ fontSize: 12 }}>
+                    {tag}
                   </div>
                 </div>
               </div>
@@ -159,61 +182,123 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
             <rect x="4" y="4" width="4" height="4" fill={palette.f} />
           </pattern>
         </defs>
+
+        {/* Floor (entire canvas, will be covered by window + walls on top) */}
         <rect x="0" y="0" width={OFFICE_W} height={OFFICE_H} fill="url(#floor-pattern)" />
 
-        {/* Walls */}
+        {/* Walls — outer frame */}
         <rect x="0" y="0" width={OFFICE_W} height="2" fill={palette.K} />
         <rect x="0" y={OFFICE_H - 2} width={OFFICE_W} height="2" fill={palette.K} />
         <rect x="0" y="0" width="2" height={OFFICE_H} fill={palette.K} />
         <rect x={OFFICE_W - 2} y="0" width="2" height={OFFICE_H} fill={palette.K} />
 
-        {/* Window strip */}
-        <rect x="3" y="2" width={OFFICE_W - 6} height="10" fill={palette.S} />
-        <rect x="3" y="11" width={OFFICE_W - 6} height="1" fill={palette.K} />
+        {/* ===== Window scene: sky gradient + Golden Gate + bay ===== */}
+        {/* Window inset: x=3..107, y=2..26 (24 tall) */}
+        {/* Sky bands — dusk over the bay */}
+        <rect x="3" y="2" width="104" height="4" fill="#3d2e4a" />
+        <rect x="3" y="6" width="104" height="3" fill="#5e3a85" />
+        <rect x="3" y="9" width="104" height="3" fill="#8b5cb8" />
+        <rect x="3" y="12" width="104" height="3" fill="#c25e85" />
+        <rect x="3" y="15" width="104" height="2" fill="#e85d3e" />
+        <rect x="3" y="17" width="104" height="2" fill="#ffd966" />
+        <rect x="3" y="19" width="104" height="2" fill="#e8b97a" />
+
+        {/* Distant Marin headland silhouette (left) */}
+        <polygon points="3,21 8,18 14,16 22,18 28,21" fill="#1f2440" />
+        <polygon points="3,21 10,19 16,20 22,21" fill="#2a1854" />
+
+        {/* Distant Presidio headland silhouette (right) */}
+        <polygon points="84,21 90,17 96,15 102,18 107,21" fill="#1f2440" />
+        <polygon points="86,21 94,19 100,20 107,21" fill="#2a1854" />
+
+        {/* Bay water — calm horizontal bands */}
+        <rect x="3" y="21" width="104" height="2" fill="#2b9fc9" />
+        <rect x="3" y="23" width="104" height="2" fill="#1e6f9a" />
+        <rect x="3" y="25" width="104" height="1" fill="#0e1024" />
+
+        {/* ===== Golden Gate Bridge ===== */}
+        {/* Main suspension cables — curve sagging from tower tops to mid-deck and back up */}
+        {/* Left half: x=30->54, y=8->17 sag */}
+        <polygon points="30,7 31,7 32,8 33,9 35,11 38,13 42,15 46,16 50,16 54,17 54,18 50,17 46,17 42,16 38,14 35,12 33,10 32,9 31,8 30,8" fill="#1a1326" />
+        {/* Right half: x=54->78, y=17->8 rise */}
+        <polygon points="54,17 58,16 62,16 66,15 70,13 73,11 75,9 76,8 77,7 78,7 78,8 77,8 76,9 75,10 73,12 70,14 66,16 62,17 58,17 54,18" fill="#1a1326" />
+
+        {/* Suspender cables (verticals from main cable down to deck) */}
+        {[34, 38, 42, 46, 50, 54, 58, 62, 66, 70, 74].map((x) => {
+          // Approximate cable y at this x — parabolic sag
+          const t = (x - 30) / 48;
+          const cableY = 8 + Math.round(9 * 4 * t * (1 - t));
+          return <line key={`sus${x}`} x1={x} y1={cableY} x2={x} y2={20} stroke="#1a1326" strokeWidth="0.4" />;
+        })}
+
+        {/* Bridge deck (roadway) — spans between towers */}
+        <rect x="27" y="20" width="54" height="1" fill="#1a1326" />
+        <rect x="27" y="20" width="54" height="0.5" fill="#3d2e4a" />
+
+        {/* Left tower (international orange) */}
+        <rect x="29" y="6" width="3" height="15" fill="#c14a4a" />
+        <rect x="28" y="6" width="5" height="1" fill="#c14a4a" />
+        <rect x="29" y="8" width="3" height="1" fill="#8a2e2e" />
+        <rect x="29" y="14" width="3" height="1" fill="#8a2e2e" />
+        {/* Tower top crown */}
+        <rect x="30" y="5" width="1" height="1" fill="#c14a4a" />
+
+        {/* Right tower */}
+        <rect x="76" y="6" width="3" height="15" fill="#c14a4a" />
+        <rect x="75" y="6" width="5" height="1" fill="#c14a4a" />
+        <rect x="76" y="8" width="3" height="1" fill="#8a2e2e" />
+        <rect x="76" y="14" width="3" height="1" fill="#8a2e2e" />
+        <rect x="77" y="5" width="1" height="1" fill="#c14a4a" />
+
+        {/* Fog rolling in at the base of the bridge */}
+        <rect x="20" y="19" width="70" height="1" fill="#e8d4a8" opacity="0.35" />
+        <rect x="30" y="20" width="50" height="1" fill="#e8d4a8" opacity="0.25" />
+
+        {/* Window mullions — 6 vertical bars give the "looking through glass" feel */}
+        <rect x="3" y="2" width="104" height="1" fill="#1a1326" />
+        <rect x="3" y="26" width="104" height="1" fill="#1a1326" />
         {Array.from({ length: 6 }).map((_, i) => (
-          <rect key={`wf${i}`} x={3 + i * 18} y="2" width="1" height="10" fill={palette.K} />
+          <rect key={`wf${i}`} x={3 + i * 17} y="2" width="0.7" height="24" fill="#1a1326" />
         ))}
-        <rect x="10" y="6" width="3" height="5" fill={palette.k} />
-        <rect x="24" y="4" width="2" height="7" fill={palette.k} />
-        <rect x="38" y="7" width="5" height="4" fill={palette.k} />
-        <rect x="56" y="5" width="3" height="6" fill={palette.k} />
-        <rect x="72" y="3" width="2" height="8" fill={palette.k} />
-        <rect x="86" y="6" width="4" height="5" fill={palette.k} />
-        <rect x="98" y="4" width="2" height="7" fill={palette.k} />
+        <rect x={106.3} y="2" width="0.7" height="24" fill="#1a1326" />
+        {/* Horizontal mullion at mid-height to break up the panes */}
+        <rect x="3" y="13" width="104" height="0.5" fill="#1a1326" opacity="0.6" />
 
-        <foreignObject x="40" y="14" width="30" height="5" style={{ overflow: 'visible' }}>
-          <div
-            style={{
-              fontFamily: 'Press Start 2P, monospace',
-              fontSize: '3.6px',
-              color: '#ffd966',
-              textAlign: 'center',
-              textShadow: '0.5px 0.5px 0 #000',
-              letterSpacing: '0.5px',
-            }}
-          >
-            · HOMI HQ ·
-          </div>
-        </foreignObject>
+        {/* ===== Wall band under the window — paneling strip ===== */}
+        <rect x="3" y="27" width="104" height="2" fill="#3d2e4a" />
+        <rect x="3" y="27" width="104" height="0.6" fill="#1a1326" />
 
-        <foreignObject x="4" y="72" width="6" height="11" style={{ overflow: 'visible' }}>
+        {/* ===== Floor accent (central rug between desk rows) ===== */}
+        <rect x="20" y="79" width="70" height="3" fill="#8b5cb8" opacity="0.55" />
+        <rect x="22" y="79" width="66" height="1" fill="#c14a4a" opacity="0.4" />
+
+        {/* ===== Decorations — break corner (bottom-left) ===== */}
+        {/* Watercooler */}
+        <foreignObject x="6" y="129" width="6" height="11" style={{ overflow: 'visible' }}>
           <div>
             <Pixel sprite={SPR_WATERCOOLER} scale={1} palette={palette} />
           </div>
         </foreignObject>
-        <foreignObject x={OFFICE_W - 10} y="75" width="6" height="9" style={{ overflow: 'visible' }}>
-          <div>
-            <Pixel sprite={SPR_PLANT} scale={1} palette={palette} />
-          </div>
-        </foreignObject>
-        <foreignObject x="52" y="75" width="6" height="9" style={{ overflow: 'visible' }}>
-          <div>
-            <Pixel sprite={SPR_PLANT} scale={1} palette={palette} />
-          </div>
-        </foreignObject>
+        {/* Mini coffee station next to watercooler */}
+        <rect x="14" y="133" width="9" height="6" fill="#3d2e4a" />
+        <rect x="14" y="132" width="9" height="1" fill="#1a1326" />
+        <rect x="15" y="134" width="3" height="3" fill="#1a1326" />
+        <rect x="19" y="134" width="3" height="2" fill="#8a2e2e" />
+        <rect x="19" y="136" width="3" height="1" fill="#c14a4a" />
+        {/* Coffee mug */}
+        <rect x="16" y="131" width="2" height="2" fill="#fff1d1" />
 
-        {/* Mid wall divider */}
-        <rect x="3" y="44" width={OFFICE_W - 6} height="1" fill={palette.K} opacity="0.2" />
+        {/* ===== Decorations — plant cluster (bottom-right) ===== */}
+        <foreignObject x={OFFICE_W - 12} y="130" width="6" height="9" style={{ overflow: 'visible' }}>
+          <div>
+            <Pixel sprite={SPR_PLANT} scale={1} palette={palette} />
+          </div>
+        </foreignObject>
+        <foreignObject x={OFFICE_W - 18} y="133" width="6" height="9" style={{ overflow: 'visible' }}>
+          <div>
+            <Pixel sprite={SPR_PLANT} scale={1} palette={palette} />
+          </div>
+        </foreignObject>
 
         {DESKS.map((d) => {
           const homie = homies.find((h) => h.desk === d.id);
@@ -269,7 +354,7 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
                 </div>
               </foreignObject>
 
-              {/* HD homie + desk sprite (composite — embeds sponsor logo) */}
+              {/* HD homie + desk sprite (composite — embeds sponsor logo + secondary badge) */}
               <foreignObject x={d.x} y={d.y} width="24" height="28" style={{ overflow: 'visible' }}>
                 <div className={pulsing ? 'bob' : ''}>
                   <HomieDeskHD defIdx={homie.spriteIdx} mode={mode} scale={1} palette={palette} />

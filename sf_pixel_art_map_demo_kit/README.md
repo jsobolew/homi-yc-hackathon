@@ -9,9 +9,13 @@ and street network from real GIS geometry instead of hand-drawn city shapes.
 - `sf_pixel_map_320.png` — native 320×320 pixel-art map. Use this in the app.
 - `sf_pixel_map_1280.png` — nearest-neighbor 4× upscale preview/export.
 - `sf_pixel_map_manifest.json` — projection bounds for converting lat/lon to pixels.
+- `sf_map_vector.svg` — zoom-friendly SVG map built from the same real GIS sources.
+- `sf_map_vector_manifest.json` — vector-map viewBox/projection metadata for future overlays.
 - `index.html` — standalone demo with animated route and pins.
+- `preview_vector.html` — lightweight browser preview for the SVG asset.
 - `sf_map_component.tsx` — React/Next-style component skeleton.
 - `generate_sf_pixel_map.py` — deterministic generator.
+- `generate_sf_svg_map.py` — deterministic SVG generator for the higher-fidelity map.
 - `curated_sf_features.json` — styling metadata, labels, bridges, lakes, and landmarks.
 - `sources/` — downloaded official DataSF geometry plus optional Overpass query/source notes.
 
@@ -50,6 +54,7 @@ http://localhost:8000/index.html
 ```bash
 /Users/jakubsobolewski/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 sources/fetch_sources.py
 /Users/jakubsobolewski/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 generate_sf_pixel_map.py --out .
+/Users/jakubsobolewski/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 generate_sf_svg_map.py --out .
 ```
 
 Optional, if you want to append OSM major-road geometry as an extra source:

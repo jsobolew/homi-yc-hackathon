@@ -719,20 +719,23 @@ export function homieDeskHD(
 }
 
 // Per-homie HD style + sponsor mapping. Index matches Homie.spriteIdx 0..5.
+import type { SponsorKey } from './SponsorLogo';
+
 export interface HomieHDDef {
   hood: string;
   hoodie: string;
   skin: string;
-  sponsor: 'halo' | 'nexus' | 'volt' | 'forge' | 'atlas' | 'comet';
+  sponsor: SponsorKey;
+  sponsorSecondary?: SponsorKey;
 }
 
 export const HOMIE_HD_DEFS: HomieHDDef[] = [
-  { hood: 'A', hoodie: 'k', skin: 'L', sponsor: 'halo' },
-  { hood: 'E', hoodie: 'k', skin: 'L', sponsor: 'nexus' },
-  { hood: 'U', hoodie: 'k', skin: 'l', sponsor: 'volt' },
-  { hood: 'G', hoodie: 'k', skin: 'L', sponsor: 'forge' },
-  { hood: 'O', hoodie: 'k', skin: 'l', sponsor: 'atlas' },
-  { hood: 'P', hoodie: 'k', skin: 'L', sponsor: 'comet' },
+  { hood: 'A', hoodie: 'k', skin: 'L', sponsor: 'browserUse' },
+  { hood: 'E', hoodie: 'k', skin: 'L', sponsor: 'agentPhone', sponsorSecondary: 'moss' },
+  { hood: 'U', hoodie: 'k', skin: 'l', sponsor: 'agentMail' },
+  { hood: 'G', hoodie: 'k', skin: 'L', sponsor: 'gemini' },
+  { hood: 'O', hoodie: 'k', skin: 'l', sponsor: 'stripe', sponsorSecondary: 'sponge' },
+  { hood: 'P', hoodie: 'k', skin: 'L', sponsor: 'supermemory' },
 ];
 
 export const HOMIE_HD_SPRITES: Sprite[] = HOMIE_HD_DEFS.map((d) =>

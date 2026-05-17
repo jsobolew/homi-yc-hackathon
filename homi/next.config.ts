@@ -6,6 +6,11 @@ const nextConfig: NextConfig = {
   // to resolve it at build time. Treat the SDK as a Node external so the
   // import stays a runtime concern.
   serverExternalPackages: ["agentmail"],
+  turbopack: {
+    ignoreIssue: [
+      { path: "**/agentmail/**" },
+    ],
+  },
 };
 
 export default nextConfig;

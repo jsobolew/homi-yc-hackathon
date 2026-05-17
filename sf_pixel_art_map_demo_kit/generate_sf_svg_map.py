@@ -163,6 +163,25 @@ def svg_text(x: float, y: float, text: str, class_name: str, size: float, anchor
     )
 
 
+def extend_polyline(points: Sequence[tuple[float, float]], start_amount: float = 0.0, end_amount: float = 0.0) -> list[tuple[float, float]]:
+    pts = list(points)
+    if len(pts) < 2:
+        return pts
+    if start_amount:
+        x0, y0 = pts[0]
+        x1, y1 = pts[1]
+        dx, dy = x0 - x1, y0 - y1
+        length = math.hypot(dx, dy) or 1.0
+        pts[0] = (x0 + dx / length * start_amount, y0 + dy / length * start_amount)
+    if end_amount:
+        x0, y0 = pts[-2]
+        x1, y1 = pts[-1]
+        dx, dy = x1 - x0, y1 - y0
+        length = math.hypot(dx, dy) or 1.0
+        pts[-1] = (x1 + dx / length * end_amount, y1 + dy / length * end_amount)
+    return pts
+
+
 def load_datasf_streets(streets_geojson: Path, projector: Projector) -> dict[str, list[list[tuple[float, float]]]]:
     skip_layers = {
         "PAPER",
@@ -229,6 +248,42 @@ def circle_icon(x: float, y: float, r: float, class_name: str) -> str:
     return f'<circle class="{class_name}" cx="{x:.2f}" cy="{y:.2f}" r="{r:.2f}" />'
 
 
+def bridge_group(name: str, points: Sequence[tuple[float, float]]) -> list[str]:
+    if name != "GOLDEN GATE":
+        lines = [svg_polyline(points, "bridge-outline"), svg_polyline(points, "bridge")]
+        if len(points) >= 2:
+            for a, b in zip(points[:-1], points[1:]):
+                mx = (a[0] + b[0]) / 2
+                my = min(a[1], b[1]) - 6
+                lines.append(
+                    f'<path class="bridge-cable" d="M{a[0]:.2f},{a[1]:.2f} Q{mx:.2f},{my:.2f} {b[0]:.2f},{b[1]:.2f}" />'
+                )
+        return lines
+
+    south = points[0]
+    north = points[-1]
+    deck = [south, *points[1:-1], north]
+    tower1 = (77.0, 69.0)
+    tower2 = (72.0, 39.0)
+    south_anchor = (80.2, 83.0)
+    north_anchor = (68.0, 18.0)
+    return [
+        svg_polyline(deck, "bridge-outline"),
+        svg_polyline(deck, "bridge"),
+        f'<line class="gg-tower-outline" x1="{tower1[0]:.2f}" y1="{tower1[1]-12:.2f}" x2="{tower1[0]:.2f}" y2="{tower1[1]+10:.2f}" />',
+        f'<line class="gg-tower-outline" x1="{tower2[0]:.2f}" y1="{tower2[1]-11:.2f}" x2="{tower2[0]:.2f}" y2="{tower2[1]+9:.2f}" />',
+        f'<line class="gg-tower" x1="{tower1[0]:.2f}" y1="{tower1[1]-12:.2f}" x2="{tower1[0]:.2f}" y2="{tower1[1]+10:.2f}" />',
+        f'<line class="gg-tower" x1="{tower2[0]:.2f}" y1="{tower2[1]-11:.2f}" x2="{tower2[0]:.2f}" y2="{tower2[1]+9:.2f}" />',
+        f'<path class="gg-cable" d="M{south_anchor[0]:.2f},{south_anchor[1]:.2f} Q{tower1[0]-1:.2f},{tower1[1]-17:.2f} {tower1[0]:.2f},{tower1[1]-12:.2f}" />',
+        f'<path class="gg-cable" d="M{tower1[0]:.2f},{tower1[1]-12:.2f} Q{tower2[0]+1:.2f},{tower2[1]-18:.2f} {tower2[0]:.2f},{tower2[1]-11:.2f}" />',
+        f'<path class="gg-cable" d="M{tower2[0]:.2f},{tower2[1]-11:.2f} Q{north_anchor[0]-1:.2f},{north_anchor[1]-6:.2f} {north_anchor[0]:.2f},{north_anchor[1]:.2f}" />',
+        f'<line class="gg-hanger" x1="78.5" y1="75.5" x2="78.5" y2="82.5" />',
+        f'<line class="gg-hanger" x1="76.0" y1="58.5" x2="76.0" y2="66.5" />',
+        f'<line class="gg-hanger" x1="73.8" y1="46.5" x2="73.8" y2="54.0" />',
+        f'<line class="gg-hanger" x1="71.2" y1="31.5" x2="71.2" y2="38.5" />',
+    ]
+
+
 def draw_landmarks(features: dict[str, Any], projector: Projector) -> list[str]:
     marks: list[str] = []
     for lm in features.get("landmarks", []):
@@ -266,7 +321,7 @@ def draw_landmarks(features: dict[str, Any], projector: Projector) -> list[str]:
     return marks
 
 
-def write_manifest(out_dir: Path, features: dict[str, Any], width: int, height: int) -> None:
+def write_manifest(out_dir: Path, features: dict[str, Any], width: int, height: float) -> None:
     landmarks = []
     for lm in features.get("landmarks", []):
         landmarks.append(
@@ -281,6 +336,7 @@ def write_manifest(out_dir: Path, features: dict[str, Any], width: int, height: 
         "name": "sf_map_vector",
         "width": width,
         "height": height,
+        "viewBox": [0, 0, width, height],
         "projection": "web_mercator",
         "bbox": features["bbox"],
         "layers": ["water", "land", "parks", "roads", "bridges", "landmarks", "labels"],
@@ -313,15 +369,40 @@ def generate_svg(
     projector = Projector(features["bbox"], width, height)
 
     shoreline_polys = load_geojson_polygons(shoreline_geojson, projector, min_area_px=10.0)
+    context_polys = [[
+        (0.0, 0.0),
+        (73.0, 0.0),
+        (67.0, 14.0),
+        (60.0, 25.0),
+        (46.0, 34.0),
+        (24.0, 38.0),
+        (0.0, 35.0),
+    ]]
     park_polys = load_geojson_polygons(parks_geojson, projector, min_area_px=3.0)
     lake_polys = [projector.path(lake["polygon"]) for lake in features.get("lakes", [])]
     roads = load_datasf_streets(streets_geojson, projector)
-    bridges = [projector.path(bridge["path"]) for bridge in features.get("bridges", [])]
+    bridges = []
+    for bridge in features.get("bridges", []):
+        if bridge["name"] == "GOLDEN GATE":
+            pts = [
+                (80.2, 83.0),
+                (77.8, 66.0),
+                (74.8, 49.0),
+                (71.6, 33.0),
+                (68.0, 18.0),
+            ]
+        elif bridge["name"] == "BAY BRIDGE":
+            pts = projector.path(bridge["path"])
+            pts = extend_polyline(pts, start_amount=5)
+        else:
+            pts = projector.path(bridge["path"])
+        bridges.append(pts)
 
     waves = add_random_segments(width, height)
     land_dots = add_dots(shoreline_polys, width, height, 420, 10, "land-dot")
     park_dots = add_dots(park_polys, width, height, 180, 11, "park-dot-small")
     downtown_dots = add_dots([[projector.xy(-122.424, 37.806), projector.xy(-122.386, 37.806), projector.xy(-122.386, 37.765), projector.xy(-122.424, 37.765)]], width, height, 200, 99, "building-dot")
+    crop_bottom = min(height, max(y for poly in shoreline_polys for _, y in poly) + 4)
 
     label_specs = [
         ("SAN FRANCISCO", -122.460, 37.716, 14, "middle"),
@@ -332,13 +413,13 @@ def generate_svg(
         ("MISSION", -122.424, 37.750, 7, "middle"),
         ("TWIN PEAKS", -122.468, 37.752, 6, "middle"),
         ("BAY BRIDGE", -122.356, 37.824, 7, "middle"),
-        ("GOLDEN GATE", -122.517, 37.825, 7, "middle"),
+        ("GOLDEN GATE", -122.522, 37.827, 7, "start"),
         ("OCEAN", -122.528, 37.750, 7, "middle"),
         ("BAY", -122.338, 37.770, 8, "middle"),
     ]
 
     svg_parts: list[str] = [
-        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {height}" role="img" aria-labelledby="title desc">',
+        f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {width} {crop_bottom:.2f}" role="img" aria-labelledby="title desc">',
         "<title id=\"title\">San Francisco vector demo map</title>",
         "<desc id=\"desc\">Stylized San Francisco map generated from official shoreline, parks, and street geometry.</desc>",
         "<defs>",
@@ -356,6 +437,12 @@ def generate_svg(
         "<filter id=\"road-glow\" x=\"-20%\" y=\"-20%\" width=\"140%\" height=\"140%\">"
         '<feDropShadow dx="0" dy="0" stdDeviation="1.4" flood-color="#1a1326" flood-opacity="0.26" />'
         "</filter>",
+        "<clipPath id=\"land-clip\">",
+        *[svg_polygon(poly, "clip-shape") for poly in shoreline_polys],
+        "</clipPath>",
+        "<clipPath id=\"park-clip\">",
+        *[svg_polygon(poly, "clip-shape") for poly in park_polys],
+        "</clipPath>",
         "<style><![CDATA[",
         "text{font-family:'Press Start 2P','VT323',monospace;letter-spacing:0.04em}",
         ".water{fill:url(#bg-grad)}",
@@ -364,15 +451,19 @@ def generate_svg(
         f'.land{{fill:{PAL["land"]};stroke:{PAL["coast"]};stroke-width:2.6;stroke-linejoin:round}}',
         f'.park{{fill:{PAL["park"]};stroke:#305744;stroke-width:1.2;stroke-linejoin:round}}',
         f'.lake{{fill:{PAL["lake"]};stroke:{PAL["coast"]};stroke-width:1.1}}',
-        f'.minor-road-outline{{fill:none;stroke:{PAL["road_dark"]};stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round;opacity:.88}}',
-        f'.minor-road{{fill:none;stroke:{PAL["road_minor"]};stroke-width:1.2;stroke-linecap:round;stroke-linejoin:round}}',
-        f'.major-road-outline{{fill:none;stroke:{PAL["road_dark"]};stroke-width:4.2;stroke-linecap:round;stroke-linejoin:round;opacity:.92}}',
-        f'.major-road{{fill:none;stroke:{PAL["road"]};stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round}}',
-        f'.highway-outline{{fill:none;stroke:{PAL["bridge_dark"]};stroke-width:6.8;stroke-linecap:round;stroke-linejoin:round;opacity:.92}}',
-        f'.highway{{fill:none;stroke:{PAL["road_highlight"]};stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}}',
+        f'.minor-road-outline{{fill:none;stroke:{PAL["road_dark"]};stroke-width:2.1;stroke-linecap:round;stroke-linejoin:round;opacity:.84}}',
+        f'.minor-road{{fill:none;stroke:{PAL["road_minor"]};stroke-width:0.9;stroke-linecap:round;stroke-linejoin:round}}',
+        f'.major-road-outline{{fill:none;stroke:{PAL["road_dark"]};stroke-width:3.3;stroke-linecap:round;stroke-linejoin:round;opacity:.9}}',
+        f'.major-road{{fill:none;stroke:{PAL["road"]};stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}}',
+        f'.highway-outline{{fill:none;stroke:{PAL["bridge_dark"]};stroke-width:5.4;stroke-linecap:round;stroke-linejoin:round;opacity:.92}}',
+        f'.highway{{fill:none;stroke:{PAL["road_highlight"]};stroke-width:2.7;stroke-linecap:round;stroke-linejoin:round}}',
         f'.bridge-outline{{fill:none;stroke:{PAL["bridge_dark"]};stroke-width:8;stroke-linecap:round;stroke-linejoin:round}}',
         f'.bridge{{fill:none;stroke:{PAL["bridge"]};stroke-width:4.6;stroke-linecap:round;stroke-linejoin:round}}',
         f'.bridge-cable{{fill:none;stroke:#de7457;stroke-width:1.2;stroke-linecap:round;opacity:.9}}',
+        f'.gg-tower-outline{{stroke:{PAL["bridge_dark"]};stroke-width:4.2;stroke-linecap:round}}',
+        f'.gg-tower{{stroke:{PAL["bridge"]};stroke-width:2.4;stroke-linecap:round}}',
+        f'.gg-cable{{fill:none;stroke:#f08a6b;stroke-width:1.5;stroke-linecap:round;opacity:.95}}',
+        f'.gg-hanger{{stroke:#f2b39a;stroke-width:1.0;stroke-linecap:round;opacity:.9}}',
         f'.wave-1{{stroke:{PAL["water2"]};stroke-width:1.2;stroke-linecap:round;opacity:.7}}',
         f'.wave-2{{stroke:{PAL["water3"]};stroke-width:1.2;stroke-linecap:round;opacity:.45}}',
         f'.fog{{stroke:{PAL["fog"]};stroke-width:2.2;stroke-linecap:round;opacity:.7}}',
@@ -413,7 +504,12 @@ def generate_svg(
     for poly in shoreline_polys:
         shadow = [(x + 2.5, y + 3.5) for x, y in poly]
         svg_parts.append(svg_polygon(shadow, "land-shadow"))
+    for poly in context_polys:
+        shadow = [(x + 2.5, y + 3.5) for x, y in poly]
+        svg_parts.append(svg_polygon(shadow, "land-shadow"))
     for poly in shoreline_polys:
+        svg_parts.append(svg_polygon(poly, "land"))
+    for poly in context_polys:
         svg_parts.append(svg_polygon(poly, "land"))
     svg_parts.append("</g>")
 
@@ -424,7 +520,7 @@ def generate_svg(
             svg_parts.append(svg_polyline(accent, "shore-accent"))
     svg_parts.append("</g>")
 
-    svg_parts.append('<g id="land-texture">')
+    svg_parts.append('<g id="land-texture" clip-path="url(#land-clip)">')
     svg_parts.extend(land_dots)
     svg_parts.append("</g>")
 
@@ -433,7 +529,7 @@ def generate_svg(
         svg_parts.append(svg_polygon(poly, "park"))
     svg_parts.append("</g>")
 
-    svg_parts.append('<g id="park-texture">')
+    svg_parts.append('<g id="park-texture" clip-path="url(#park-clip)">')
     svg_parts.extend(park_dots)
     svg_parts.append("</g>")
 
@@ -467,16 +563,8 @@ def generate_svg(
     svg_parts.append("</g>")
 
     svg_parts.append('<g id="bridges">')
-    for pts in bridges:
-        svg_parts.append(svg_polyline(pts, "bridge-outline"))
-        svg_parts.append(svg_polyline(pts, "bridge"))
-        if len(pts) >= 2:
-            for a, b in zip(pts[:-1], pts[1:]):
-                mx = (a[0] + b[0]) / 2
-                my = min(a[1], b[1]) - 6
-                svg_parts.append(
-                    f'<path class="bridge-cable" d="M{a[0]:.2f},{a[1]:.2f} Q{mx:.2f},{my:.2f} {b[0]:.2f},{b[1]:.2f}" />'
-                )
+    for bridge, pts in zip(features.get("bridges", []), bridges):
+        svg_parts.extend(bridge_group(bridge["name"], pts))
     svg_parts.append("</g>")
 
     svg_parts.append('<g id="landmarks">')
@@ -492,7 +580,7 @@ def generate_svg(
     svg_parts.append("</svg>")
 
     (out_dir / "sf_map_vector.svg").write_text("\n".join(svg_parts), encoding="utf-8")
-    write_manifest(out_dir, features, width, height)
+    write_manifest(out_dir, features, width, crop_bottom)
 
 
 def main() -> None:

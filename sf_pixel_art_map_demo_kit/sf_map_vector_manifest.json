@@ -1,7 +1,13 @@
 {
   "name": "sf_map_vector",
   "width": 320,
-  "height": 320,
+  "height": 295.53225840980167,
+  "viewBox": [
+    0,
+    0,
+    320,
+    295.53225840980167
+  ],
   "projection": "web_mercator",
   "bbox": {
     "west": -122.535,
