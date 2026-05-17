@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Pixel } from '../Pixel';
 import {
   DEFAULT_PALETTE,
-  MARKER_VARIANTS,
+  MAP_MARKER_VARIANTS,
   SPR_BAY_BRIDGE,
   SPR_COIT,
   SPR_FERRY,
@@ -187,13 +187,13 @@ function PropertyMarker({
   const propIssues = issues.filter(
     (i) => i.propertyId === property.id && !resolvedIssues.includes(i.id) && i.status !== 'resolved',
   );
-  const variant = MARKER_VARIANTS[property.variant];
+  const variant = MAP_MARKER_VARIANTS[property.variant];
   return (
     <foreignObject
-      x={property.x - 5}
-      y={property.y - 9}
-      width="10"
-      height="11"
+      x={property.x - 6}
+      y={property.y - 11}
+      width="12"
+      height="14"
       style={{ overflow: 'visible', cursor: 'pointer' }}
       onClick={() => onClick(property.id)}
     >
@@ -205,9 +205,9 @@ function PropertyMarker({
             style={{
               position: 'absolute',
               top: -4,
-              right: -2,
-              width: 4,
-              height: 4,
+              right: -3,
+              width: 5,
+              height: 5,
               background: '#ff5555',
               border: '0.5px solid #1a1326',
               borderRadius: 0,
@@ -215,9 +215,9 @@ function PropertyMarker({
               alignItems: 'center',
               justifyContent: 'center',
               fontFamily: 'Press Start 2P, monospace',
-              fontSize: '2.4px',
+              fontSize: '2.8px',
               color: 'white',
-              lineHeight: '4px',
+              lineHeight: '5px',
               textAlign: 'center',
             }}
           >
@@ -229,15 +229,15 @@ function PropertyMarker({
             style={{
               position: 'absolute',
               top: -4,
-              right: -2,
-              width: 4,
-              height: 4,
+              right: -3,
+              width: 5,
+              height: 5,
               background: '#6cc24a',
               border: '0.5px solid #1a1326',
               fontFamily: 'Press Start 2P, monospace',
-              fontSize: '2.4px',
+              fontSize: '2.8px',
               color: 'white',
-              lineHeight: '4px',
+              lineHeight: '5px',
               textAlign: 'center',
             }}
           >
@@ -369,15 +369,15 @@ export function MapView({ properties, issues, state, onSelectProperty }: MapView
           ))}
 
           <MapLabel x={3} y={11} text="MARIN" />
-          <MapLabel x={8} y={44} text="GG PARK" />
-          <MapLabel x={14} y={30} text="SUNSET" />
-          <MapLabel x={34} y={20} text="MARINA" />
-          <MapLabel x={36} y={46} text="TWIN PEAKS" />
-          <MapLabel x={44} y={36} text="ALAMO SQ" />
-          <MapLabel x={46} y={56} text="MISSION" />
-          <MapLabel x={58} y={42} text="SoMa" />
-          <MapLabel x={64} y={20} text="FINANCIAL" />
-          <MapLabel x={76} y={48} text="BAY BRIDGE" />
+          <MapLabel x={8} y={46} text="GG PARK" />
+          <MapLabel x={14} y={32} text="SUNSET" />
+          <MapLabel x={32} y={22} text="MARINA" />
+          <MapLabel x={34} y={48} text="TWIN PEAKS" />
+          <MapLabel x={42} y={32} text="ALAMO" />
+          <MapLabel x={44} y={58} text="MISSION" />
+          <MapLabel x={58} y={46} text="SoMa" />
+          <MapLabel x={60} y={20} text="FINANCIAL" />
+          <MapLabel x={74} y={50} text="BAY BRIDGE" />
 
           {VENDORS.map((v) => (
             <VendorOffice key={v.id} vendor={v} />

@@ -2,7 +2,10 @@
 
 import { useEffect, useRef } from 'react';
 import { Pixel } from '../Pixel';
-import { GLYPHS, HOMIE_SPRITES, DEFAULT_PALETTE } from '../sprites';
+import { HomieHD } from '../HomieHD';
+import { SPONSORS, type SponsorKey } from '../SponsorLogo';
+import { SponsorLogo } from '../SponsorLogo';
+import { GLYPHS_HD, HOMIE_HD_DEFS, DEFAULT_PALETTE } from '../sprites';
 import type { Homie } from '@/lib/data/homies';
 import type { HomieRuntime } from '../useEvents';
 import type { Issue } from '@/lib/data/issues';
@@ -28,7 +31,7 @@ function TranscriptPanel({ runtime }: { runtime: HomieRuntime | undefined }) {
   return (
     <div className="col" style={{ gap: 8 }}>
       <div className="row" style={{ gap: 8 }}>
-        <Pixel sprite={GLYPHS.phone} scale={3} />
+        <Pixel sprite={GLYPHS_HD.phone} scale={3} />
         <div>
           <div className="pixel-font" style={{ fontSize: 9, color: 'var(--ui-accent)' }}>
             LIVE TRANSCRIPT
@@ -69,7 +72,7 @@ function BrowserPanel({ runtime }: { runtime: HomieRuntime | undefined }) {
   return (
     <div className="col" style={{ gap: 8 }}>
       <div className="row" style={{ gap: 8 }}>
-        <Pixel sprite={GLYPHS.laptop} scale={3} />
+        <Pixel sprite={GLYPHS_HD.laptop} scale={3} />
         <div>
           <div className="pixel-font" style={{ fontSize: 9, color: 'var(--ui-accent-2)' }}>
             LIVE BROWSER
@@ -128,7 +131,7 @@ function MemoryPanel({ runtime }: { runtime: HomieRuntime | undefined }) {
   return (
     <div className="col" style={{ gap: 8 }}>
       <div className="row" style={{ gap: 8 }}>
-        <Pixel sprite={GLYPHS.money} scale={3} />
+        <Pixel sprite={GLYPHS_HD.money} scale={3} />
         <div>
           <div className="pixel-font" style={{ fontSize: 9, color: 'var(--ui-accent-2)' }}>
             SHARED MEMORY · SUPERMEMORY
@@ -172,7 +175,9 @@ function MemoryPanel({ runtime }: { runtime: HomieRuntime | undefined }) {
 
 export function AgentPanel({ homie, runtime, issue, property, onClose }: AgentPanelProps) {
   const palette = DEFAULT_PALETTE;
-  const sprite = HOMIE_SPRITES[homie.spriteIdx];
+  const def = HOMIE_HD_DEFS[homie.spriteIdx];
+  const sponsorKey = def?.sponsor as SponsorKey | undefined;
+  const sponsor = sponsorKey ? SPONSORS[sponsorKey] : null;
 
   let body: React.ReactNode;
   if (homie.id === 'brooks') body = <MemoryPanel runtime={runtime} />;
@@ -192,8 +197,8 @@ export function AgentPanel({ homie, runtime, issue, property, onClose }: AgentPa
             borderBottom: '3px solid var(--c-line)',
           }}
         >
-          <div style={{ background: 'var(--c-line)', padding: 4 }}>
-            <Pixel sprite={sprite} scale={3} palette={palette} />
+          <div style={{ background: 'var(--c-line)', padding: 4, lineHeight: 0 }}>
+            <HomieHD defIdx={homie.spriteIdx} scale={3} palette={palette} />
           </div>
           <div style={{ flex: 1 }}>
             <div className="pixel-font" style={{ fontSize: 10, color: 'var(--ui-accent-2)' }}>
@@ -209,6 +214,33 @@ export function AgentPanel({ homie, runtime, issue, property, onClose }: AgentPa
           </button>
         </div>
 
+        {/* Sponsor bar — prominent partner branding */}
+        {sponsor && sponsorKey && (
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '8px 12px',
+              background: '#0e1024',
+              borderBottom: '3px solid var(--c-line)',
+            }}
+          >
+            <SponsorLogo keyName={sponsorKey} size={56} pixelated={true} />
+            <div className="col" style={{ gap: 2, flex: 1 }}>
+              <div className="pixel-font" style={{ fontSize: 8, color: 'var(--ui-muted)' }}>
+                SPONSORED HOMIE
+              </div>
+              <div className="pixel-font" style={{ fontSize: 11, color: 'var(--ui-accent-2)' }}>
+                {sponsor.name.toUpperCase()}
+              </div>
+              <div className="mono-font dim" style={{ fontSize: 14 }}>
+                this homie is sponsored by {sponsor.name}
+              </div>
+            </div>
+          </div>
+        )}
+
         {issue && property && (
           <div
             style={{
@@ -220,7 +252,7 @@ export function AgentPanel({ homie, runtime, issue, property, onClose }: AgentPa
               alignItems: 'center',
             }}
           >
-            <Pixel sprite={GLYPHS[ISSUE_TYPES[issue.type].glyph]} scale={3} />
+            <Pixel sprite={GLYPHS_HD[ISSUE_TYPES[issue.type].glyph]} scale={3} />
             <div className="col" style={{ gap: 0, flex: 1 }}>
               <div className="mono-font" style={{ fontSize: 16 }}>
                 {ISSUE_TYPES[issue.type].label}
