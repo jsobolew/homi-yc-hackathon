@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SF Vector Map Preview</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(180deg, #0e1024 0%, #1b2740 100%);
+        color: #ffefc2;
+        font-family: system-ui, sans-serif;
+      }
+      .frame {
+        width: min(92vw, 1200px);
+        padding: 24px;
+        border: 1px solid rgba(255, 239, 194, 0.18);
+        border-radius: 18px;
+        background: rgba(11, 18, 31, 0.5);
+        box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+      }
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      p {
+        margin: 0 0 14px;
+        opacity: 0.8;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="frame">
+      <p>Preview of `sf_map_vector.svg`</p>
+      <img src="./sf_map_vector.svg" alt="San Francisco vector map" />
+    </div>
+  </body>
+</html>
