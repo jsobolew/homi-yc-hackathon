@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Pixel } from '../Pixel';
-import { DEFAULT_PALETTE, GLYPHS } from '../sprites';
+import { DEFAULT_PALETTE, GLYPHS, GLYPHS_HD } from '../sprites';
 import { ISSUE_TYPES } from '@/lib/data/issueTypes';
 import type { Issue } from '@/lib/data/issues';
 import type { Property } from '@/lib/data/properties';
@@ -335,14 +335,14 @@ function BuildingActivity({
           >
             <div
               style={{
-                width: 24,
-                height: 24,
+                width: 32,
+                height: 32,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
               }}
             >
-              <Pixel sprite={GLYPHS[type.glyph]} scale={3} />
+              <Pixel sprite={GLYPHS_HD[type.glyph]} scale={2} />
             </div>
             <div style={{ flex: 1 }}>
               <div className="mono-font" style={{ fontSize: 18 }}>

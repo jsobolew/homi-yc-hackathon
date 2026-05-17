@@ -41,6 +41,7 @@ export const DEFAULT_PALETTE: Record<string, string> = {
   m: '#aa2222',
   C: '#b6f0a0',
   X: '#000000',
+  Z: '#fbf6e4',
 };
 
 export type Sprite = string[];
@@ -619,3 +620,437 @@ export const SPR_VENDOR_OFFICE: Sprite = [
   'WWWWKKWWWW',
   'kkkkkkkkkk',
 ];
+
+// ============================================================================
+// HD sprite library — higher-density variants used by the sponsor-aware UI.
+// Sponsor logos are SVG and composited on top of the homie chest by HomieHD.
+// ============================================================================
+
+// HD homie character — 16w x 24h. Chest is plain hoodie color; the SVG
+// SponsorLogo sits on top at rows ~14-22.
+export function homieHD(hood: string, hoodie: string, skin: string = 'L'): Sprite {
+  const H = hood, S = hoodie, L = skin;
+  return [
+    '....HHHHHHHH....',
+    '...HHHHHHHHHH...',
+    '..HHHHHHHHHHHH..',
+    '..HhHHHHHHHHhH..',
+    '..HHLLLLLLLLHH..',
+    '..HLLLLLLLLLLH..',
+    '..HLLKLLLLKLLH..',
+    '..HLLKLLLLKLLH..',
+    '..HLLLLLLLLLLH..',
+    '..HLLLLpppLLLH..',
+    '..HHLLLLLLLLHH..',
+    '...HLLLLLLLLH...',
+    '...HSSSSSSSSH...',
+    '..SSSSSSSSSSSS..',
+    '.SSSSSSSSSSSSSS.',
+    '.SSSSSSSSSSSSSS.',
+    '.SSSSSSSSSSSSSS.',
+    '.SSSSSSSSSSSSSS.',
+    '.SSSSSSSSSSSSSS.',
+    '.SSSSSSSSSSSSSS.',
+    '.SSSSSSSSSSSSSS.',
+    '.SSSSSSSSSSSSSS.',
+    '.SSSSSSSSSSSSSS.',
+    '..SSS......SSS..',
+  ].map((row) => row.replace(/H/g, H).replace(/S/g, S).replace(/L/g, L));
+}
+
+// HD homie at a desk — 24w x 26h. Bigger desk + visible laptop/phone + body.
+export function homieDeskHD(
+  hood: string,
+  hoodie: string,
+  mode: 'laptop' | 'phone',
+  skin: string = 'L',
+): Sprite {
+  const head = [
+    '........HHHHHHHH........',
+    '.......HHHHHHHHHH.......',
+    '......HHHHHHHHHHHH......',
+    '......HhHHHHHHHHhH......',
+    '......HHLLLLLLLLHH......',
+    '......HLLLLLLLLLLH......',
+    '......HLLKLLLLKLLH......',
+    '......HLLKLLLLKLLH......',
+    '......HLLLLLLLLLLH......',
+    '......HLLLLLLLLLLH......',
+    '......HHLLLLLLLLHH......',
+    '.......HLLLLLLLLH.......',
+    '......HSSSSSSSSSSH......',
+  ];
+  const body = [
+    '.....SSSSSSSSSSSSSS.....',
+    '....SSSSSSSSSSSSSSSS....',
+    '....SSSSSSSSSSSSSSSS....',
+    '....SSSSSSSSSSSSSSSS....',
+    '....SSSSSSSSSSSSSSSS....',
+    '....SSSSSSSSSSSSSSSS....',
+  ];
+  const item =
+    mode === 'laptop'
+      ? [
+          '..kkkkkkkkkkkkkkkkkkkk..',
+          '..kQQQQQQQQQQQQQQQQQQk..',
+          '..kQWWWWWWWWWWWWWWWWQk..',
+          '..kQWQQQQQQQQQQQQQWWQk..',
+          '..kQWQQWWQQQQWWWWQWWQk..',
+          '..kQWWWWWWWWWWWWWWWWQk..',
+          '..kkkkkkkkkkkkkkkkkkkk..',
+        ]
+      : [
+          '..K.....................',
+          '.KK..............PPPP...',
+          'KKK.............PPPPPP..',
+          'KKK.............P....P..',
+          '.KK.............PPPPPP..',
+          '..K..............PPPP...',
+          '........................',
+        ];
+  const desk = [
+    'FFFFFFFFFFFFFFFFFFFFFFFF',
+    'fFFFFFFFFFFFFFFFFFFFFFFf',
+    'fkfffffffffffffffffffkff',
+  ];
+  return [...head, ...body, ...item, ...desk].map((row) =>
+    row.replace(/H/g, hood).replace(/S/g, hoodie).replace(/L/g, skin),
+  );
+}
+
+// Per-homie HD style + sponsor mapping. Index matches Homie.spriteIdx 0..5.
+export interface HomieHDDef {
+  hood: string;
+  hoodie: string;
+  skin: string;
+  sponsor: 'halo' | 'nexus' | 'volt' | 'forge' | 'atlas' | 'comet';
+}
+
+export const HOMIE_HD_DEFS: HomieHDDef[] = [
+  { hood: 'A', hoodie: 'k', skin: 'L', sponsor: 'halo' },
+  { hood: 'E', hoodie: 'k', skin: 'L', sponsor: 'nexus' },
+  { hood: 'U', hoodie: 'k', skin: 'l', sponsor: 'volt' },
+  { hood: 'G', hoodie: 'k', skin: 'L', sponsor: 'forge' },
+  { hood: 'O', hoodie: 'k', skin: 'l', sponsor: 'atlas' },
+  { hood: 'P', hoodie: 'k', skin: 'L', sponsor: 'comet' },
+];
+
+export const HOMIE_HD_SPRITES: Sprite[] = HOMIE_HD_DEFS.map((d) =>
+  homieHD(d.hood, d.hoodie, d.skin),
+);
+
+// ---------- HD building markers — 18w x 18h ----------
+const SPR_MARK_HD_A: Sprite = [
+  '......AAAAAA......',
+  '.....AaaaaaaA.....',
+  '....AaaaaaaaaA....',
+  '...AAAAAAAAAAAA...',
+  '..wWWWWWWWWWWWWw..',
+  '..wWQQwWQQwWQQWw..',
+  '..wWQQwWQQwWQQWw..',
+  '..wWWWWWWWWWWWWw..',
+  '..wWQQwWQQwWQQWw..',
+  '..wWQQwWQQwWQQWw..',
+  '..wWWWWWWWWWWWWw..',
+  '..wWQQwWQQwWQQWw..',
+  '..wWQQwWQQwWQQWw..',
+  '..wWWWWWWWWWWWWw..',
+  '..wWWWWWKKWWWWWw..',
+  '..wWWWWWKKWWWWWw..',
+  'kkwwwwwwKKwwwwwwkk',
+  'kkkkkkkkkkkkkkkkkk',
+];
+const SPR_MARK_HD_B: Sprite = [
+  '........DD........',
+  '.......DDDD.......',
+  '......DDDDDD......',
+  '.....DDDDDDDD.....',
+  '....DDDDDDDDDD....',
+  '...DDDDDDDDDDDD...',
+  '..PWWWWWWWWWWWWp..',
+  '..PWYYwWWWWwYYWp..',
+  '..PWYYwWWWWwYYWp..',
+  '..PWWWWWWWWWWWWp..',
+  '..PWQQwWYYwWQQWp..',
+  '..PWQQwWYYwWQQWp..',
+  '..PWWWWWWWWWWWWp..',
+  '..PWQQwWWWWwQQWp..',
+  '..PWQQwWWWWwQQWp..',
+  '..PWWWWWKKWWWWWp..',
+  'kkPPPPPPKKPPPPPpkk',
+  'kkkkkkkkkkkkkkkkkk',
+];
+const SPR_MARK_HD_C: Sprite = [
+  '..kkkkkkkkkkkkkkkk',
+  '..kEEEEEEEEEEEEEEk',
+  '..kEEEEEEEEEEEEEEk',
+  '..kkkkkkkkkkkkkkkk',
+  '..kQQQQwQQQQwQQQQk',
+  '..kQQQQwQQQQwQQQQk',
+  '..kkkkkkkkkkkkkkkk',
+  '..kQQQQwQQQQwQQQQk',
+  '..kQQQQwQQQQwQQQQk',
+  '..kkkkkkkkkkkkkkkk',
+  '..kQQQQwQQQQwQQQQk',
+  '..kQQQQwQQQQwQQQQk',
+  '..kkkkkkkkkkkkkkkk',
+  '..kYYYYwYYYYwYYYYk',
+  '..kYYYYwYYYYwYYYYk',
+  '..kkkkkkKKkkkkkkkk',
+  'kkkkkkkkKKkkkkkkkk',
+  'kkkkkkkkkkkkkkkkkk',
+];
+const SPR_MARK_HD_D: Sprite = [
+  '..wwwwwwwwwwwwww..',
+  '.wFFFFFFFFFFFFFFw.',
+  'wFFFFFFFFFFFFFFFFw',
+  'wfFFFFFFFFFFFFFFfw',
+  'wWWWWWWWWWWWWWWWWw',
+  'wWYYwWYYwWYYwWYYWw',
+  'wWYYwWYYwWYYwWYYWw',
+  'wWWWWWWWWWWWWWWWWw',
+  'wWQQwWYYwWQQwWQQWw',
+  'wWQQwWYYwWQQwWQQWw',
+  'wWWWWWWWWWWWWWWWWw',
+  'wWQQwWQQwWQQwWQQWw',
+  'wWQQwWQQwWQQwWQQWw',
+  'wWWWWWWWWWWWWWWWWw',
+  'wWWWWWWWKKWWWWWWWw',
+  'wWWWWWWWKKWWWWWWWw',
+  'kkkkkkkkKKkkkkkkkk',
+  'kkkkkkkkkkkkkkkkkk',
+];
+export const MARKER_HD_VARIANTS: Sprite[] = [SPR_MARK_HD_A, SPR_MARK_HD_B, SPR_MARK_HD_C, SPR_MARK_HD_D];
+
+// ---------- Compact map markers — 12w x 12h ----------
+const SPR_MAP_A: Sprite = [
+  '...AAAAAA...',
+  '..AaaaaaaA..',
+  '.AAAAAAAAAA.',
+  'WWWWWWWWWWWW',
+  'WQQwWQQwWQQk',
+  'WWWWWWWWWWWk',
+  'WQQwWQQwWQQk',
+  'WWWWWWWWWWWk',
+  'WQQwWQQwWQQk',
+  'WWWWWWWWWWWk',
+  'WWWWKKWWWWWk',
+  'kkkkkkkkkkkk',
+];
+const SPR_MAP_B: Sprite = [
+  '.....DD.....',
+  '....DDDD....',
+  '...DDDDDD...',
+  '..DDDDDDDD..',
+  '.PWWWWWWWWp.',
+  '.PWYYwWYYWp.',
+  '.PWWWWWWWWp.',
+  '.PWQQwWQQWp.',
+  '.PWWWWWWWWp.',
+  '.PWQQwWQQWp.',
+  '.PWWWKKWWWp.',
+  'kkPPPKKPPPkk',
+];
+const SPR_MAP_C: Sprite = [
+  'kkkkkkkkkkkk',
+  'kEEEEEEEEEEk',
+  'kkkkkkkkkkkk',
+  'kQQwQQwQQwQk',
+  'kQQwQQwQQwQk',
+  'kkkkkkkkkkkk',
+  'kQQwQQwQQwQk',
+  'kQQwQQwQQwQk',
+  'kkkkkkkkkkkk',
+  'kYYwYYwYYwYk',
+  'kkkkKKkkkkkk',
+  'kkkkKKkkkkkk',
+];
+const SPR_MAP_D: Sprite = [
+  'wwwwwwwwwwww',
+  'wFFFFFFFFFFw',
+  'wFFFFFFFFFFw',
+  'WWWWWWWWWWWW',
+  'WYYwWYYwWYYW',
+  'WWWWWWWWWWWW',
+  'WQQwWYYwWQQW',
+  'WWWWWWWWWWWW',
+  'WQQwWQQwWQQW',
+  'WWWWKKWWWWWW',
+  'kkkkKKkkkkkk',
+  'kkkkkkkkkkkk',
+];
+export const MAP_MARKER_VARIANTS: Sprite[] = [SPR_MAP_A, SPR_MAP_B, SPR_MAP_C, SPR_MAP_D];
+
+// ---------- HD issue glyphs — 12w x 12h ----------
+export const GLYPHS_HD: Record<string, Sprite> = {
+  drop: [
+    '.....QQ.....',
+    '....QQQQ....',
+    '....QQQQ....',
+    '...QQHHQQ...',
+    '...QQHHQQ...',
+    '..QQHHHHQQ..',
+    '..QQHHHHQQ..',
+    '.QQQHHHHQQQ.',
+    '.QQQQQQQQQQ.',
+    '.QQQQQQQQQQ.',
+    '..QQQQQQQQ..',
+    '...QQQQQQ...',
+  ],
+  bolt: [
+    '...YYYYY....',
+    '..YYYYYY....',
+    '.YYYYYY.....',
+    '.YYYYY......',
+    'YYYYY.......',
+    'YYYYYYYYY...',
+    '.....YYYY...',
+    '....YYYY....',
+    '...YYYY.....',
+    '..YYY.......',
+    '.YY.........',
+    'Y...........',
+  ],
+  thermo: [
+    '....WWWW....',
+    '....WMMW....',
+    '...WWMMWW...',
+    '...WWMMWW...',
+    '...WWMMWW...',
+    '...WWMMWW...',
+    '...WWMMWW...',
+    '..WMMMMMMW..',
+    '.WMMMMMMMMW.',
+    '.WMMMMMMMMW.',
+    '.WMMMMMMMMW.',
+    '..WWWWWWWW..',
+  ],
+  bug: [
+    '..KK....KK..',
+    '..KKKKKKKK..',
+    '.KKKKKKKKKK.',
+    'KKMKKKKMMKKK',
+    'KMMHHHHHHMMK',
+    'KMMHHHHHHMMK',
+    'KMMHKHHKHMMK',
+    'KMMHHHHHHMMK',
+    'KMMMMMMMMMMK',
+    '.KKKKKKKKKK.',
+    'K.K......K.K',
+    'K...........',
+  ],
+  lock: [
+    '...KKKKKK...',
+    '..KKKKKKKK..',
+    '..KK....KK..',
+    '..KK....KK..',
+    '..KK....KK..',
+    '.KKKKKKKKKK.',
+    'KYYYYYYYYYYK',
+    'KYYYKKKKYYYK',
+    'KYYKKKKKKYYK',
+    'KYYKKKKKKYYK',
+    'KYYYKKKKYYYK',
+    'KKKKKKKKKKKK',
+  ],
+  broom: [
+    '..........KK',
+    '.........KKK',
+    '........KKK.',
+    '.......KKK..',
+    '......KKK...',
+    '.....KKK....',
+    '....KKKKK...',
+    '...YYYYYYY..',
+    '..YYYYYYYY..',
+    '..YyYyYyYy..',
+    '..YyYyYyYy..',
+    '...YYYYY....',
+  ],
+  speech: [
+    'KKKKKKKKKKKK',
+    'KWWWWWWWWWWK',
+    'KWWPWWWWPWWK',
+    'KWWPWWWWPWWK',
+    'KWWWWWWWWWWK',
+    'KWWWPPPPWWWK',
+    'KWWWPPPPWWWK',
+    'KWWWWWWWWWWK',
+    'KKKKKKKKKKKK',
+    'KKKK........',
+    'KKK.........',
+    'KK..........',
+  ],
+  wrench: [
+    '..........K.',
+    '.........KKK',
+    '........KKKK',
+    '.......KKKK.',
+    '......KKKK..',
+    '.....KKKK...',
+    '....KKKK....',
+    '...KKKK.....',
+    '..KKKK......',
+    '.hKKK.......',
+    'hhKK........',
+    'hh..........',
+  ],
+  cloud: [
+    '....hhhhh...',
+    '...hWWWWWh..',
+    '..hWWWWWWWh.',
+    '.hWWWWWWWWWh',
+    'hWWWWWWWWWWh',
+    'hWWWWWWWWWWh',
+    'hWWWWWWWWWWh',
+    '.hhhhhhhhhh.',
+    '............',
+    '............',
+    '............',
+    '............',
+  ],
+  phone: [
+    '.KKKKKKK....',
+    'KK.....KK...',
+    'K.......KK..',
+    'K........KK.',
+    'K.........KK',
+    '.K........K.',
+    '..K......KK.',
+    '..KK....KK..',
+    '...KK..KK...',
+    '....KKKK....',
+    '............',
+    '............',
+  ],
+  laptop: [
+    '............',
+    'kkkkkkkkkkkk',
+    'kSSSSSSSSSSk',
+    'kSWWWWWWWWSk',
+    'kSWQQwQQQWSk',
+    'kSWQQwQQQWSk',
+    'kSWWWWWWWWSk',
+    'kkkkkkkkkkkk',
+    '.kkkkkkkkkk.',
+    '............',
+    '............',
+    '............',
+  ],
+  // Reuse the low-density money glyph for HD path; AgentPanel reads GLYPHS_HD.money.
+  money: [
+    '...KKKKKK...',
+    '...KYYYYK...',
+    '..KYYYYYYK..',
+    '.KYYYYYYYYK.',
+    'KYYYKKKKYYYK',
+    'KYYKWWWWKYYK',
+    'KYYKWWWWKYYK',
+    'KYYYKKKKYYYK',
+    '.KYYYYYYYYK.',
+    '..KYYYYYYK..',
+    '...KYYYYK...',
+    '...KKKKKK...',
+  ],
+};
+
