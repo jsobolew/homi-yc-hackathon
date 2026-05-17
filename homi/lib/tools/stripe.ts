@@ -2,7 +2,17 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+let stripe: Stripe | null = null;
+
+function getStripeClient() {
+  if (stripe) return stripe;
+  const apiKey = process.env.STRIPE_SECRET_KEY;
+  if (!apiKey) {
+    throw new Error('STRIPE_SECRET_KEY is required for live Stripe usage');
+  }
+  stripe = new Stripe(apiKey);
+  return stripe;
+}
 
 export const stripeChargeVendor = tool({
   description:
@@ -19,7 +29,8 @@ export const stripeChargeVendor = tool({
       .describe('Short memo explaining the job, e.g. "HVAC repair at 1180 Castro"'),
   }),
   execute: async ({ amountCents, vendorName, memo }) => {
-    const pi = await stripe.paymentIntents.create({
+    const client = getStripeClient();
+    const pi = await client.paymentIntents.create({
       amount: amountCents,
       currency: 'usd',
       payment_method: 'pm_card_visa',

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pixel } from '@/components/Pixel';
 import { DEFAULT_PALETTE, SPR_LOGO } from '@/components/sprites';
 import { MapView } from '@/components/views/MapView';
@@ -14,17 +14,31 @@ import { INITIAL_HOMIES, type Homie } from '@/lib/data/homies';
 import type { HomieId } from '@/lib/types';
 
 type View = 'map' | 'building' | 'office';
+type OfficeMode = 'preview' | 'live';
 
 export default function Home() {
   const [view, setView] = useState<View>('map');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [selectedHomieId, setSelectedHomieId] = useState<HomieId | null>(null);
-  const [issues, setIssues] = useState<Issue[]>(INITIAL_ISSUES);
+  const [officeMode, setOfficeMode] = useState<OfficeMode>('preview');
   const [homies] = useState<Homie[]>(INITIAL_HOMIES);
   const [dispatchedIssues, setDispatchedIssues] = useState<Record<string, string>>({});
 
   const { state, start, reset } = useEvents();
   const palette = DEFAULT_PALETTE;
+  const issues = useMemo<Issue[]>(
+    () =>
+      INITIAL_ISSUES.map((issue) => {
+        if (state.resolvedIssues.includes(issue.id)) {
+          return { ...issue, status: 'resolved' };
+        }
+        if (dispatchedIssues[issue.id]) {
+          return { ...issue, status: 'dispatched', assignedHomie: 'ramirez' };
+        }
+        return issue;
+      }),
+    [dispatchedIssues, state.resolvedIssues],
+  );
 
   const selectedProperty = useMemo(
     () => (selectedPropertyId ? PROPERTIES.find((p) => p.id === selectedPropertyId) ?? null : null),
@@ -34,21 +48,11 @@ export default function Home() {
     () => (selectedHomieId ? homies.find((h) => h.id === selectedHomieId) ?? null : null),
     [selectedHomieId, homies],
   );
-
-  // Auto-switch the side panel to whichever homie is active in the chain.
-  useEffect(() => {
-    if (view === 'office' && state.activeHomie) {
-      setSelectedHomieId(state.activeHomie);
-    }
-  }, [state.activeHomie, view]);
-
-  // Mark resolved issues server-side state so map markers update.
-  useEffect(() => {
-    if (state.resolvedIssues.length === 0) return;
-    setIssues((prev) =>
-      prev.map((i) => (state.resolvedIssues.includes(i.id) ? { ...i, status: 'resolved' } : i)),
-    );
-  }, [state.resolvedIssues]);
+  const officeHomie =
+    (officeMode === 'live' && view === 'office' && state.activeHomie
+      ? homies.find((h) => h.id === state.activeHomie)
+      : selectedHomie) ??
+    homies[0];
 
   function selectProperty(propertyId: string) {
     setSelectedPropertyId(propertyId);
@@ -57,33 +61,36 @@ export default function Home() {
 
   function selectHomie(id: string) {
     setSelectedHomieId(id as HomieId);
+    setOfficeMode('preview');
+    setView('office');
+  }
+
+  function watchLive(id?: string | null) {
+    const target = (id ?? state.activeHomie ?? 'ramirez') as HomieId;
+    setSelectedHomieId(target);
+    setOfficeMode('live');
     setView('office');
   }
 
   async function dispatchIssue(issue: Issue) {
     if (dispatchedIssues[issue.id]) return;
     setDispatchedIssues((prev) => ({ ...prev, [issue.id]: 'pending' }));
-    setIssues((prev) =>
-      prev.map((i) =>
-        i.id === issue.id ? { ...i, status: 'dispatched', assignedHomie: 'ramirez' } : i,
-      ),
-    );
-    setView('office');
     setSelectedHomieId('ramirez');
+    setOfficeMode('live');
     await start(issue.id);
   }
 
   function resetAll() {
-    setIssues(INITIAL_ISSUES);
     setDispatchedIssues({});
     setSelectedHomieId(null);
+    setOfficeMode('preview');
     setSelectedPropertyId(null);
     reset();
     setView('map');
   }
 
-  const homieIssue = selectedHomie
-    ? issues.find((i) => i.assignedHomie === selectedHomie.id) || null
+  const homieIssue = officeHomie
+    ? issues.find((i) => i.assignedHomie === officeHomie.id || i.id === officeHomie.issueId) || null
     : null;
   const homieIssueProperty = homieIssue
     ? PROPERTIES.find((p) => p.id === homieIssue.propertyId) || null
@@ -171,25 +178,38 @@ export default function Home() {
             onBack={() => setView('map')}
             onTapIssue={dispatchIssue}
             onSelectHomie={selectHomie}
+            onWatchLive={watchLive}
           />
         )}
-        {view === 'office' && (
-          <OfficeView
-            homies={homies}
-            state={state}
-            selectedHomieId={selectedHomieId}
-            onSelectHomie={(id) => setSelectedHomieId(id as HomieId)}
-          />
-        )}
-
-        {view === 'office' && selectedHomie && (
-          <AgentPanel
-            homie={selectedHomie}
-            runtime={state.homies[selectedHomie.id]}
-            issue={homieIssue}
-            property={homieIssueProperty}
-            onClose={() => setSelectedHomieId(null)}
-          />
+        {view === 'office' && officeHomie && (
+          <div className="office-layout">
+            <div className="office-scene">
+              <div className="office-scene-inner">
+                <OfficeView
+                  homies={homies}
+                  state={state}
+                  selectedHomieId={officeHomie.id}
+                  onSelectHomie={(id) => {
+                    setSelectedHomieId(id as HomieId);
+                    setOfficeMode('preview');
+                  }}
+                />
+              </div>
+            </div>
+            <div className="office-rail">
+              <AgentPanel
+                homie={officeHomie}
+                runtime={state.homies[officeHomie.id]}
+                mode={officeMode}
+                issue={homieIssue}
+                property={homieIssueProperty}
+                onClose={() => {
+                  setSelectedHomieId(state.activeHomie ?? homies[0].id);
+                  setOfficeMode('live');
+                }}
+              />
+            </div>
+          </div>
         )}
       </div>
     </div>

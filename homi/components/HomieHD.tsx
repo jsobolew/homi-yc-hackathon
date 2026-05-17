@@ -28,12 +28,12 @@ export function HomieHD({
   const sponsor = (sponsorKey ?? def.sponsor) as SponsorKey;
   const secondary = (sponsorSecondaryKey ?? def.sponsorSecondary) as SponsorKey | undefined;
   const sprite = HOMIE_HD_SPRITES[defIdx % HOMIE_HD_SPRITES.length];
-  const logoSize = 11 * scale;
+  const logoSize = 9 * scale;
   const logoX = (16 * scale - logoSize) / 2;
-  const logoY = 13 * scale;
-  const secSize = 6 * scale;
-  const secX = logoX + logoSize - secSize / 2;
-  const secY = logoY + logoSize - secSize / 2;
+  const logoY = 14 * scale;
+  const secSize = 4 * scale;
+  const secX = (16 * scale - secSize) / 2;
+  const secY = 2 * scale;
   return (
     <div
       className={className}
@@ -57,7 +57,7 @@ export function HomieHD({
             pointerEvents: 'none',
           }}
         >
-          <SponsorLogo keyName={sponsor} size={logoSize} />
+          <SponsorLogo keyName={sponsor} size={logoSize} variant="patch" />
         </div>
       )}
       {secondary && (
@@ -70,12 +70,12 @@ export function HomieHD({
             height: secSize,
             lineHeight: 0,
             pointerEvents: 'none',
-            boxShadow: '0 0 0 1px #fff, 0 0 0 2px #1a1326',
+            boxShadow: '0 0 0 1px #fff1d1, 0 0 0 2px #1a1326',
             borderRadius: 1,
             overflow: 'hidden',
           }}
         >
-          <SponsorLogo keyName={secondary} size={secSize} />
+          <SponsorLogo keyName={secondary} size={secSize} variant="capBadge" />
         </div>
       )}
     </div>
@@ -99,12 +99,12 @@ export function HomieDeskHD({
   const sponsor = (sponsorKey ?? def.sponsor) as SponsorKey;
   const secondary = (sponsorSecondaryKey ?? def.sponsorSecondary) as SponsorKey | undefined;
   const sprite = homieDeskHD(def.hood, def.hoodie, mode, def.skin);
-  const logoSize = 12 * scale;
+  const logoSize = 8 * scale;
   const logoX = (24 * scale - logoSize) / 2;
-  const logoY = 14 * scale;
-  const secSize = 7 * scale;
-  const secX = logoX + logoSize - secSize / 2;
-  const secY = logoY + logoSize - secSize / 2;
+  const logoY = 13 * scale;
+  const secSize = 4 * scale;
+  const secX = (24 * scale - secSize) / 2;
+  const secY = 2 * scale;
   return (
     <div
       className={className}
@@ -128,7 +128,7 @@ export function HomieDeskHD({
             pointerEvents: 'none',
           }}
         >
-          <SponsorLogo keyName={sponsor} size={logoSize} />
+          <SponsorLogo keyName={sponsor} size={logoSize} variant="patch" />
         </div>
       )}
       {secondary && (
@@ -141,12 +141,12 @@ export function HomieDeskHD({
             height: secSize,
             lineHeight: 0,
             pointerEvents: 'none',
-            boxShadow: '0 0 0 1px #fff, 0 0 0 2px #1a1326',
+            boxShadow: '0 0 0 1px #fff1d1, 0 0 0 2px #1a1326',
             borderRadius: 1,
             overflow: 'hidden',
           }}
         >
-          <SponsorLogo keyName={secondary} size={secSize} />
+          <SponsorLogo keyName={secondary} size={secSize} variant="capBadge" />
         </div>
       )}
     </div>
