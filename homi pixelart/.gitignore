@@ -1,0 +1,7 @@
+# dependencies / build artifacts
+node_modules/
+dist/
+.DS_Store
+*.log
+.vscode/
+.idea/
