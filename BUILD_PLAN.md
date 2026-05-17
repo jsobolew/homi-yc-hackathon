@@ -66,7 +66,6 @@ homi/
 │       ├── dispatch/route.ts         — POST { issueId } → { dispatchId }
 │       ├── stream/[dispatchId]/route.ts  — GET SSE
 │       ├── scenario/[name]/route.ts  — POST: preload demo state
-│       ├── voice/call/route.ts       — POST: Gemini Live + AgentPhone (not used in demo)
 │       └── webhooks/
 │           ├── stripe/route.ts
 │           └── agentmail/route.ts
@@ -326,10 +325,11 @@ Each agent uses Vercel AI SDK `streamText` with Gemini 2.5 Pro and a tight tool 
 
 **Mock events:** scripted transcript of the negotiation + a `started` event that the UI uses to fire `Piotr's phone rings on the table` (audio file plays through phone).
 
-**Live pipeline (for the backend-is-built proof):**
-- `POST /api/voice/call` → opens AgentPhone outbound call, attaches Gemini Live audio bridge.
-- Gemini Live transcribes live + speaks back.
-- Returns `callId`; events for the live path would emit `transcript_line` as Gemini transcribes.
+**Live pipeline (AgentPhone-only — Gemini Live bridge is impossible):**
+- AgentPhone runs on Retell; no raw audio access. Park uses AgentPhone's *own* hosted conversation engine.
+- One-shot bootstrap: `POST /v1/agents` with the negotiator system prompt + verbal-consent opening line → `PARK_AGENT_ID`. (Done — see `scripts/bootstrap-agentphone.ts`.)
+- Per call: `POST /v1/calls { agentId, toNumber, fromNumberId }` → `callId`. Poll `GET /v1/calls/{id}` until status terminal; flatten transcript turns into `transcript_line` events.
+- Park homie generator (`lib/agents/park.ts`) wraps this. Demo narration: *"AgentPhone's voice agent haggling on behalf of Homi."* Plays better than admitting we couldn't bridge into a different model — especially at AgentPhone's own hackathon.
 
 ### 7.3 Okafor — Tenant Comms  (`lib/agents/okafor.ts`)
 
@@ -362,16 +362,25 @@ This is the cleanest way to give Supermemory a visible role: it's the shared bra
 
 ---
 
-## 8. Voice pipeline (built, not demoed live)  (`app/api/voice/call/route.ts`)
+## 8. Voice pipeline (built, not demoed live)  (`lib/tools/agentphone.ts`, `lib/agents/park.ts`)
+
+**Reality check:** AgentPhone is built on Retell. No raw audio, no WebRTC media stream, no PCM webhooks. The original Gemini Live audio bridge is not possible. **AgentPhone-only.**
 
 ```ts
-POST /api/voice/call { vendorPhone, scenario: 'hvac-negotiation' }
-→ AgentPhone.outbound({ to: vendorPhone, audioBridge: 'webrtc' })
-→ pipe audio to Gemini Live with system prompt "you are a property manager calling for a quote"
-→ Gemini speaks back, transcribed to text, returned in response stream
+// One-shot bootstrap (scripts/bootstrap-agentphone.ts) — already run:
+POST /v1/agents { name: 'Park', systemPrompt: '<negotiator>', voiceMode: 'hosted' }
+→ PARK_AGENT_ID
+GET /v1/numbers
+→ AGENTPHONE_FROM_NUMBER_ID (for +12603344967)
+
+// Per call (lib/tools/agentphone.ts):
+POST /v1/calls { agentId: PARK_AGENT_ID, toNumber, fromNumberId: AGENTPHONE_FROM_NUMBER_ID }
+→ { callId }
+GET /v1/calls/{callId}  (poll every 2-3s)
+→ { status, transcript, recordingUrl?, duration? }
 ```
 
-**Acceptance:** one successful real call to a real plumber, transcript captured. Don't need to do this twice. The recording IS the demo.
+**Acceptance:** one successful real call to a real plumber via `scripts/voice-rung1.ts` → `voice-rung2.ts` → real plumber. Transcript captured. The recording IS the demo (if AgentPhone returns a `recordingUrl`; otherwise speakerphone record).
 
 ---
 

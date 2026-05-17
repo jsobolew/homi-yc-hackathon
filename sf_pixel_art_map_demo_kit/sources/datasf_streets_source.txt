@@ -1,0 +1,11 @@
+DataSF source for real street centerlines:
+
+Dataset: Streets - Active and Retired
+Landing page: https://data.sfgov.org/Geographic-Locations-and-Boundaries/Streets-Active-and-Retired/3psu-pn9h
+Catalog page: https://catalog.data.gov/dataset/streets-active-and-retired
+JSON download: https://data.sfgov.org/api/views/3psu-pn9h/rows.json?accessType=DOWNLOAD
+CSV download: https://data.sfgov.org/api/views/3psu-pn9h/rows.csv?accessType=DOWNLOAD
+Socrata GeoJSON endpoint: https://data.sfgov.org/resource/3psu-pn9h.geojson?$limit=50000
+License: PDDL 1.0 per Data.gov catalog metadata.
+
+The provided artifact does not embed this dataset. Use it if you want to replace the curated roads with official street geometry.

@@ -1,0 +1,22 @@
+{
+  "name": "sf_pixel_map",
+  "width": 320,
+  "height": 320,
+  "projection": "web_mercator",
+  "bbox": {
+    "west": -122.535,
+    "south": 37.695,
+    "east": -122.3,
+    "north": 37.842
+  },
+  "coordinateTransform": {
+    "description": "x=(lon-west)/(east-west)*(width-1); y=(merc(north)-merc(lat))/(merc(north)-merc(south))*(height-1)",
+    "mercY": "log(tan(pi/4 + radians(lat)/2))"
+  },
+  "recommendedCss": {
+    "imageRendering": "pixelated",
+    "nativeResolution": "320x320",
+    "displayResolution": "960px to 1280px wide"
+  },
+  "attributionNote": "Curated stylized geometry. If regenerated with OSM/Overpass data, display: \u00a9 OpenStreetMap contributors. DataSF street source is PDDL 1.0."
+}

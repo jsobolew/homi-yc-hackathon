@@ -1,0 +1,5 @@
+Generated demo kit notice
+
+The Python/HTML/TypeScript code and generated pixel-art assets in this folder were created for this request and may be used, copied, modified, and included in a demo or application.
+
+This is not legal advice. If you regenerate the map with OpenStreetMap data, follow the OpenStreetMap attribution and ODbL requirements. If you regenerate with DataSF data, follow the applicable DataSF / PDDL 1.0 terms.

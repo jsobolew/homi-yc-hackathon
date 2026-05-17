@@ -46,7 +46,7 @@ Every sponsor gets a visible 10–15 second moment.
 | Homie | Role | Sponsor | What's real |
 |---|---|---|---|
 | Ramirez | Vendor Sourcer | **Browser Use** + **Moss** | Real headless browser session navigating Yelp / vendor sites; Moss does semantic search across our seeded vendor index |
-| Park | Negotiator | **Google DeepMind** (Gemini Live) + **AgentPhone** (telephony) | Pipeline real and tested through AgentPhone's number; demo plays a pre-recorded real call captured this morning |
+| Park | Negotiator | **AgentPhone** (telephony + conversation engine) | AgentPhone's hosted voice agent runs our negotiator system prompt; real outbound calls to real vendors. Demo plays a pre-recorded real call captured this morning. ※ Gemini Live audio bridge is not possible — AgentPhone is built on Retell and exposes no raw audio. Park uses AgentPhone end-to-end. |
 | Okafor | Tenant Comms | **AgentMail** | Real email sent to a real tenant inbox we control |
 | Sato | Scheduler | **Browser Use** | Real form fill on a vendor booking page (Bugout Pest / SparklePros stub we host on Vercel) |
 | Chen | Payments | **Stripe** + **Sponge** | Real Stripe test-mode charge; Sponge handles vendor-side invoicing/settlement |
@@ -65,7 +65,6 @@ Next.js 16 app · Vercel · single repo
 │   ├── api/
 │   │   ├── dispatch/route.ts          — POST: kick off a homie for an issue
 │   │   ├── stream/[dispatchId]/route.ts  — SSE: streams homie events to UI
-│   │   ├── voice/call/route.ts        — Gemini Live + AgentPhone (built, unused in demo)
 │   │   └── webhooks/{stripe,agentmail}/route.ts
 ├── lib/
 │   ├── agents/
@@ -125,9 +124,10 @@ Move fast, do them in this order unless something blocks. Anything below the lin
 - [ ] Dispatch API + SSE event stream + mock adapter. Full POC flow works end-to-end on mocks.
 
 **Real plumber call (Piotr-led, asap — call quality drops as the day goes on)**
-- [ ] Get AgentPhone number provisioned.
-- [ ] Make 3–4 outbound calls to real SF plumbers with the agent's voice (Gemini Live). Verbal consent at the start of each.
-- [ ] Capture one usable 15-second clip → `public/sounds/park-call.mp3`.
+- [x] Get AgentPhone number provisioned. ✅ (`+12603344967`)
+- [x] Provision Park agent via AgentPhone API with negotiator system prompt + verbal-consent opening line.
+- [ ] Make 3–4 outbound calls to real SF plumbers via AgentPhone. The agent reads the verbal-consent opening then runs the negotiation. Verify transcript looks coherent.
+- [ ] Capture one usable 15-second clip → `public/sounds/park-call.mp3` (AgentPhone may return a recording URL; fall back to speakerphone recording if not).
 
 **Agents (one at a time, end-to-end before moving to the next)**
 - [ ] **Browser Use** wired with embedded browser window inside Ramirez's panel — judge must see the live browser inside the pixel UI.
@@ -139,7 +139,7 @@ Move fast, do them in this order unless something blocks. Anything below the lin
 - [ ] **Browser Use** (Sato variant) — booking form fill on stub vendor page we host.
 
 **Voice pipeline (built but not demoed live)**
-- [ ] Gemini Live ↔ AgentPhone end-to-end. One successful real call proves it works. Recording stays the demo path.
+- [x] AgentPhone-only voice pipeline. AgentPhone's hosted conversation engine runs the negotiator system prompt — no Gemini Live bridge (Retell-based platform exposes no raw audio). One successful real outbound call proves it works. Recording stays the demo path.
 
 **Map upgrade**
 - [ ] Bigger grid (200 × 140), vendor offices placed at real SF coords.
@@ -185,6 +185,6 @@ Move fast, do them in this order unless something blocks. Anything below the lin
 ## 9. Locked decisions
 
 - **Tenant inbox:** Piotr provides the Gmail address — drop it into `DEMO_TENANT_EMAIL` env var when ready.
-- **Voice carrier:** AgentPhone (the host) provides the number. No Twilio.
+- **Voice carrier:** AgentPhone (the host) provides both the number AND the conversation engine. No Twilio, no Gemini Live audio bridge (impossible — AgentPhone is on Retell). Park's "brain" during a call is AgentPhone's hosted LLM running our negotiator system prompt. Gemini stays the brain for every *other* homie (Brooks, Okafor, Chen, Sato, Ramirez) — just not the mouth on Park.
 - **Gemini model:** `gemini-2.5-pro` everywhere. Downgrade only if rate-limited mid-build.
 - **Browser Use surface:** embedded browser window rendered *inside* the homie's pixel panel. The judge sees a real browser working inside the pixel frame — that's the visual proof. No `cmd+tab` fallback unless the embed API outright fails.

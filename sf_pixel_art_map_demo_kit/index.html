@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>SF Pixel Map Demo</title>
+  <style>
+    :root {
+      --bg: #111827;
+      --panel: #182235;
+      --text: #f6ebcd;
+      --muted: #9fb1bd;
+      --accent: #ff6f59;
+      --accent2: #ffd166;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: radial-gradient(circle at 40% 20%, #243449, var(--bg) 72%);
+      color: var(--text);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    .shell {
+      width: min(94vw, 980px);
+      padding: 22px;
+      background: rgba(24, 34, 53, 0.88);
+      border: 1px solid rgba(246,235,205,0.12);
+      box-shadow: 0 24px 80px rgba(0,0,0,.35);
+    }
+    .top {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 14px;
+    }
+    h1 {
+      margin: 0;
+      font-size: clamp(16px, 2vw, 22px);
+      letter-spacing: .02em;
+      font-weight: 800;
+    }
+    .sub {
+      color: var(--muted);
+      font-size: 12px;
+      text-align: right;
+    }
+    .map-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      overflow: hidden;
+      border: 5px solid #342a3b;
+      background: #172e48;
+      image-rendering: pixelated;
+    }
+    .map-wrap > img {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      image-rendering: pixelated;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+    svg.route-layer {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
+      pointer-events: none;
+      image-rendering: pixelated;
+    }
+    .route-base {
+      fill: none;
+      stroke: rgba(42,32,48,.95);
+      stroke-width: 2.2;
+      stroke-linecap: square;
+      stroke-linejoin: round;
+    }
+    .route-hot {
+      fill: none;
+      stroke: var(--accent2);
+      stroke-width: 1.1;
+      stroke-linecap: square;
+      stroke-linejoin: round;
+      stroke-dasharray: 6 5;
+      animation: dash 1.1s linear infinite;
+    }
+    @keyframes dash { to { stroke-dashoffset: -11; } }
+    .pin {
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      margin-left: -9px;
+      margin-top: -17px;
+      transform-origin: 50% 100%;
+      filter: drop-shadow(2px 2px 0 #2a2030);
+    }
+    .pin::before {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 1px;
+      width: 12px;
+      height: 12px;
+      background: var(--accent);
+      border: 2px solid #2a2030;
+      border-radius: 50%;
+    }
+    .pin::after {
+      content: "";
+      position: absolute;
+      left: 7px;
+      top: 11px;
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 8px solid var(--accent);
+    }
+    .pin.hot { animation: bob .95s steps(2, end) infinite; }
+    .pin.hot::before { background: var(--accent2); }
+    @keyframes bob {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+    .callout {
+      position: absolute;
+      padding: 7px 8px;
+      background: rgba(18, 24, 36, .88);
+      border: 1px solid rgba(246,235,205,.24);
+      color: var(--text);
+      font-size: 11px;
+      line-height: 1.25;
+      box-shadow: 3px 3px 0 rgba(42,32,48,.85);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+    .attrib {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 10px;
+      line-height: 1.35;
+    }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <div class="top">
+      <h1>SF live ops map</h1>
+      <div class="sub">320px native · CSS pixelated · lat/lon overlay</div>
+    </div>
+    <div class="map-wrap" id="map">
+      <img src="sf_pixel_map_320.png" alt="Stylized pixel-art map of San Francisco" />
+      <svg class="route-layer" id="route" viewBox="0 0 320 320" preserveAspectRatio="none" aria-hidden="true"></svg>
+    </div>
+    <div class="attrib">
+      Demo art: procedurally generated stylized geometry. If regenerated using OSM/Overpass data, display © OpenStreetMap contributors. DataSF streets source is PDDL 1.0.
+    </div>
+  </main>
+
+  <script>
+    const manifest = {
+      width: 320,
+      height: 320,
+      projection: "web_mercator",
+      bbox: { west: -122.535, south: 37.695, east: -122.300, north: 37.842 }
+    };
+
+    function mercY(lat) {
+      const rad = lat * Math.PI / 180;
+      return Math.log(Math.tan(Math.PI / 4 + rad / 2));
+    }
+
+    function project(lon, lat) {
+      const b = manifest.bbox;
+      const x = ((lon - b.west) / (b.east - b.west)) * (manifest.width - 1);
+      const yNorth = mercY(b.north);
+      const ySouth = mercY(b.south);
+      const y = ((yNorth - mercY(lat)) / (yNorth - ySouth)) * (manifest.height - 1);
+      return { x, y };
+    }
+
+    const stops = [
+      { label: "YC demo HQ", lon: -122.409, lat: 37.782, hot: true },
+      { label: "Ferry pickup", lon: -122.393, lat: 37.795 },
+      { label: "Mission drop", lon: -122.418, lat: 37.760 },
+      { label: "Presidio", lon: -122.470, lat: 37.800 }
+    ];
+
+    const map = document.getElementById("map");
+    const route = document.getElementById("route");
+
+    function render() {
+      // Route in native 320x320 coordinates; SVG scales with the image.
+      const routePoints = [
+        [-122.470, 37.800],
+        [-122.424, 37.786],
+        [-122.409, 37.782],
+        [-122.418, 37.760],
+        [-122.393, 37.795]
+      ].map(([lon, lat]) => project(lon, lat));
+      const d = routePoints.map((p, i) => `${i === 0 ? "M" : "L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+      route.innerHTML = `<path class="route-base" d="${d}"/><path class="route-hot" d="${d}"/>`;
+
+      const rect = map.getBoundingClientRect();
+      const sx = rect.width / manifest.width;
+      const sy = rect.height / manifest.height;
+
+      // Clear previous dynamic HTML nodes.
+      [...map.querySelectorAll(".pin,.callout")].forEach(n => n.remove());
+
+      stops.forEach((stop, idx) => {
+        const p = project(stop.lon, stop.lat);
+        const pin = document.createElement("div");
+        pin.className = `pin ${stop.hot ? "hot" : ""}`;
+        pin.style.left = `${p.x * sx}px`;
+        pin.style.top = `${p.y * sy}px`;
+        map.appendChild(pin);
+
+        if (idx < 2) {
+          const c = document.createElement("div");
+          c.className = "callout";
+          c.textContent = stop.label;
+          c.style.left = `${p.x * sx + 12}px`;
+          c.style.top = `${p.y * sy - 28}px`;
+          map.appendChild(c);
+        }
+      });
+    }
+
+    addEventListener("resize", render);
+    render();
+  </script>
+</body>
+</html>

@@ -1,16 +1,41 @@
 import { emit, finish } from './bus';
 import type { DispatchContext, HomieEvent, HomieId } from './types';
 import { mockAdapters, mockBrooksReadAdapter, mockBrooksWriteAdapter } from './adapters/mock';
+import { runBrooksRead, runBrooksWrite } from './agents/brooks';
+import { runChen } from './agents/chen';
+import { runOkafor } from './agents/okafor';
+import { runPark } from './agents/park';
+import { runRamirez } from './agents/ramirez';
+import { runSato } from './agents/sato';
 import { INITIAL_ISSUES } from './data/issues';
 import { ISSUE_TYPES } from './data/issueTypes';
 
 type Adapter = (ctx: DispatchContext) => AsyncGenerator<HomieEvent, void, void>;
 
-// Adapters wired up as the lab grows. For now everything routes to mocks; flipping
-// HOMIE_<NAME>_LIVE=1 in env will eventually pick a live adapter here.
+const isLive = (id: HomieId) =>
+  process.env[`HOMIE_${id.toUpperCase()}_LIVE`] === '1';
+
 function pickAdapter(id: HomieId, phase: 'read' | 'write' | 'run' = 'run'): Adapter {
   if (id === 'brooks') {
+    if (isLive('brooks')) {
+      return phase === 'write' ? runBrooksWrite : runBrooksRead;
+    }
     return phase === 'write' ? mockBrooksWriteAdapter : mockBrooksReadAdapter;
+  }
+  if (id === 'okafor' && isLive('okafor')) {
+    return runOkafor;
+  }
+  if (id === 'chen' && isLive('chen')) {
+    return runChen;
+  }
+  if (id === 'park' && isLive('park')) {
+    return runPark;
+  }
+  if (id === 'ramirez' && isLive('ramirez')) {
+    return runRamirez;
+  }
+  if (id === 'sato' && isLive('sato')) {
+    return runSato;
   }
   return mockAdapters[id];
 }
