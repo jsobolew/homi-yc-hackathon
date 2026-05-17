@@ -1,0 +1,75 @@
+{
+  "name": "sf_map_vector",
+  "width": 320,
+  "height": 295.53225840980167,
+  "viewBox": [
+    0,
+    0,
+    320,
+    295.53225840980167
+  ],
+  "projection": "web_mercator",
+  "bbox": {
+    "west": -122.535,
+    "south": 37.695,
+    "east": -122.3,
+    "north": 37.842
+  },
+  "layers": [
+    "water",
+    "land",
+    "parks",
+    "roads",
+    "bridges",
+    "landmarks",
+    "labels"
+  ],
+  "landmarks": [
+    {
+      "name": "FERRY",
+      "lon": -122.393,
+      "lat": 37.795,
+      "sprite": "ferry"
+    },
+    {
+      "name": "SALESFORCE",
+      "lon": -122.397,
+      "lat": 37.789,
+      "sprite": "tower"
+    },
+    {
+      "name": "COIT",
+      "lon": -122.405,
+      "lat": 37.802,
+      "sprite": "coit"
+    },
+    {
+      "name": "SUTRO",
+      "lon": -122.452,
+      "lat": 37.755,
+      "sprite": "sutro"
+    },
+    {
+      "name": "DOLORES",
+      "lon": -122.427,
+      "lat": 37.759,
+      "sprite": "parkdot"
+    },
+    {
+      "name": "YC",
+      "lon": -122.409,
+      "lat": 37.782,
+      "sprite": "pin"
+    }
+  ],
+  "coordinateTransform": {
+    "description": "x=(lon-west)/(east-west)*width; y=(merc(north)-merc(lat))/(merc(north)-merc(south))*height",
+    "mercY": "log(tan(pi/4 + radians(lat)/2))"
+  },
+  "recommendations": {
+    "embedAs": "inline_svg_or_img",
+    "zoom": "vector-friendly; suitable for pan/zoom camera transforms",
+    "overlayStrategy": "project lon/lat into the same viewBox before placing properties, vendors, and vehicles"
+  },
+  "attributionNote": "Base geometry comes from official DataSF shoreline, parks, and streets datasets. If OSM overlays are added later, also display: \u00a9 OpenStreetMap contributors."
+}
