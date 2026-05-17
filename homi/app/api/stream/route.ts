@@ -1,11 +1,20 @@
-import { getBuffer, getDispatch, onFinish, subscribe } from '@/lib/bus';
+import { createBus, getDispatch, onFinish, subscribe } from '@/lib/bus';
+import { run } from '@/lib/orchestrator';
 import type { HomieEvent } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+export const maxDuration = 300;
 
-export async function GET(req: Request, ctx: { params: Promise<{ dispatchId: string }> }) {
-  const { dispatchId } = await ctx.params;
+export async function GET(req: Request) {
+  const url = new URL(req.url);
+  const issueId = url.searchParams.get('issueId');
+  if (!issueId) {
+    return Response.json({ error: 'issueId is required' }, { status: 400 });
+  }
+
+  const dispatchId = crypto.randomUUID();
+  createBus(dispatchId, issueId);
 
   const encoder = new TextEncoder();
   let closed = false;
@@ -29,8 +38,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ dispatchId: str
         safeEnqueue(encoder.encode(`data: ${JSON.stringify(e)}\n\n`));
       };
 
-      // Replay buffered events first so late subscribers catch up.
-      for (const e of getBuffer(dispatchId)) send(e);
+      // Tell the client which dispatch this is, in case it wants to display it.
+      safeEnqueue(encoder.encode(`event: dispatch\ndata: ${JSON.stringify({ dispatchId })}\n\n`));
 
       unsubEvents = subscribe(dispatchId, send);
       unsubFinish = onFinish(dispatchId, () => {
@@ -45,7 +54,13 @@ export async function GET(req: Request, ctx: { params: Promise<{ dispatchId: str
         }
       });
 
-      // If the dispatch already completed before subscribing, close immediately.
+      // Start the orchestrator inside the same invocation. Fluid Compute keeps
+      // the function alive while the response stream is open.
+      void run(dispatchId, issueId).catch(() => {
+        // orchestrator already emits its own error events; nothing to do here.
+      });
+
+      // If the dispatch somehow completed before subscribing, close immediately.
       const d = getDispatch(dispatchId);
       if (d && d.status !== 'running') {
         safeEnqueue(encoder.encode(`event: finish\ndata: {}\n\n`));
@@ -59,7 +74,6 @@ export async function GET(req: Request, ctx: { params: Promise<{ dispatchId: str
         }
       }
 
-      // Handle client disconnect.
       req.signal.addEventListener('abort', () => {
         closed = true;
         unsubEvents();
