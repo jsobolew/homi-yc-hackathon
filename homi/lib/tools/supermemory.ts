@@ -4,7 +4,17 @@ import Supermemory from 'supermemory';
 
 export const SUPERMEMORY_CONTAINER_TAG = 'homi:demo';
 
-const sm = new Supermemory({ apiKey: process.env.SUPERMEMORY_API_KEY! });
+let sm: Supermemory | null = null;
+
+function getSupermemoryClient() {
+  if (sm) return sm;
+  const apiKey = process.env.SUPERMEMORY_API_KEY;
+  if (!apiKey) {
+    throw new Error('SUPERMEMORY_API_KEY is required for live Supermemory usage');
+  }
+  sm = new Supermemory({ apiKey });
+  return sm;
+}
 
 export const supermemoryWrite = tool({
   description:
@@ -20,7 +30,8 @@ export const supermemoryWrite = tool({
       ),
   }),
   execute: async ({ key, value }) => {
-    const r = await sm.documents.add({
+    const client = getSupermemoryClient();
+    const r = await client.documents.add({
       content: `${key}: ${value}`,
       containerTag: SUPERMEMORY_CONTAINER_TAG,
       metadata: { key },
@@ -36,7 +47,8 @@ export const supermemorySearch = tool({
     query: z.string().describe('What you want to recall. Natural language.'),
   }),
   execute: async ({ query }) => {
-    const r = await sm.search.memories({
+    const client = getSupermemoryClient();
+    const r = await client.search.memories({
       q: query,
       containerTag: SUPERMEMORY_CONTAINER_TAG,
       threshold: 0.5,

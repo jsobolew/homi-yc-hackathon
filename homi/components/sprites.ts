@@ -634,13 +634,13 @@ export function homieHD(hood: string, hoodie: string, skin: string = 'L'): Sprit
     '....HHHHHHHH....',
     '...HHHHHHHHHH...',
     '..HHHHHHHHHHHH..',
-    '..HhHHHHHHHHhH..',
+    '..HHhhhhhhhhHH..',
+    '...HHHHHHHHHH...',
     '..HHLLLLLLLLHH..',
     '..HLLLLLLLLLLH..',
     '..HLLKLLLLKLLH..',
     '..HLLKLLLLKLLH..',
     '..HLLLLLLLLLLH..',
-    '..HLLLLpppLLLH..',
     '..HHLLLLLLLLHH..',
     '...HLLLLLLLLH...',
     '...HSSSSSSSSH...',
@@ -669,19 +669,20 @@ export function homieDeskHD(
     '........HHHHHHHH........',
     '.......HHHHHHHHHH.......',
     '......HHHHHHHHHHHH......',
-    '......HhHHHHHHHHhH......',
+    '......HHhhhhhhhhHH......',
+    '.......HHHHHHHHHH.......',
     '......HHLLLLLLLLHH......',
     '......HLLLLLLLLLLH......',
     '......HLLKLLLLKLLH......',
     '......HLLKLLLLKLLH......',
-    '......HLLLLLLLLLLH......',
     '......HLLLLLLLLLLH......',
     '......HHLLLLLLLLHH......',
     '.......HLLLLLLLLH.......',
     '......HSSSSSSSSSSH......',
+    '.....SSSSSSSSSSSSSS.....',
   ];
   const body = [
-    '.....SSSSSSSSSSSSSS.....',
+    '....SSSSSSSSSSSSSSSS....',
     '....SSSSSSSSSSSSSSSS....',
     '....SSSSSSSSSSSSSSSS....',
     '....SSSSSSSSSSSSSSSS....',
@@ -691,13 +692,13 @@ export function homieDeskHD(
   const item =
     mode === 'laptop'
       ? [
-          '..kkkkkkkkkkkkkkkkkkkk..',
-          '..kQQQQQQQQQQQQQQQQQQk..',
-          '..kQWWWWWWWWWWWWWWWWQk..',
-          '..kQWQQQQQQQQQQQQQWWQk..',
-          '..kQWQQWWQQQQWWWWQWWQk..',
-          '..kQWWWWWWWWWWWWWWWWQk..',
-          '..kkkkkkkkkkkkkkkkkkkk..',
+          '........................',
+          '..kkk...................',
+          '..kQQQQQQQk.............',
+          '..kQWWWWWQkk............',
+          '..kQWWWWWQWWk...........',
+          '..kkkkkkkkkkk...........',
+          '........................',
         ]
       : [
           '..K.....................',
@@ -1056,4 +1057,3 @@ export const GLYPHS_HD: Record<string, Sprite> = {
     '...KKKKKK...',
   ],
 };
-

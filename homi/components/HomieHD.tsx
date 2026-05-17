@@ -32,7 +32,7 @@ export function HomieHD({
   const logoX = (16 * scale - logoSize) / 2;
   const logoY = 14 * scale;
   const secSize = 4 * scale;
-  const secX = 6 * scale;
+  const secX = (16 * scale - secSize) / 2;
   const secY = 2 * scale;
   return (
     <div
@@ -99,11 +99,11 @@ export function HomieDeskHD({
   const sponsor = (sponsorKey ?? def.sponsor) as SponsorKey;
   const secondary = (sponsorSecondaryKey ?? def.sponsorSecondary) as SponsorKey | undefined;
   const sprite = homieDeskHD(def.hood, def.hoodie, mode, def.skin);
-  const logoSize = 10 * scale;
+  const logoSize = 8 * scale;
   const logoX = (24 * scale - logoSize) / 2;
-  const logoY = 15 * scale;
+  const logoY = 13 * scale;
   const secSize = 4 * scale;
-  const secX = 10 * scale;
+  const secX = (24 * scale - secSize) / 2;
   const secY = 2 * scale;
   return (
     <div

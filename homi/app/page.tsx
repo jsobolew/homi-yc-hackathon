@@ -14,11 +14,13 @@ import { INITIAL_HOMIES, type Homie } from '@/lib/data/homies';
 import type { HomieId } from '@/lib/types';
 
 type View = 'map' | 'building' | 'office';
+type OfficeMode = 'preview' | 'live';
 
 export default function Home() {
   const [view, setView] = useState<View>('map');
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [selectedHomieId, setSelectedHomieId] = useState<HomieId | null>(null);
+  const [officeMode, setOfficeMode] = useState<OfficeMode>('preview');
   const [homies] = useState<Homie[]>(INITIAL_HOMIES);
   const [dispatchedIssues, setDispatchedIssues] = useState<Record<string, string>>({});
 
@@ -47,10 +49,9 @@ export default function Home() {
     [selectedHomieId, homies],
   );
   const officeHomie =
-    (view === 'office' && state.activeHomie
+    (officeMode === 'live' && view === 'office' && state.activeHomie
       ? homies.find((h) => h.id === state.activeHomie)
       : selectedHomie) ??
-    selectedHomie ??
     homies[0];
 
   function selectProperty(propertyId: string) {
@@ -60,20 +61,29 @@ export default function Home() {
 
   function selectHomie(id: string) {
     setSelectedHomieId(id as HomieId);
+    setOfficeMode('preview');
+    setView('office');
+  }
+
+  function watchLive(id?: string | null) {
+    const target = (id ?? state.activeHomie ?? 'ramirez') as HomieId;
+    setSelectedHomieId(target);
+    setOfficeMode('live');
     setView('office');
   }
 
   async function dispatchIssue(issue: Issue) {
     if (dispatchedIssues[issue.id]) return;
     setDispatchedIssues((prev) => ({ ...prev, [issue.id]: 'pending' }));
-    setView('office');
     setSelectedHomieId('ramirez');
+    setOfficeMode('live');
     await start(issue.id);
   }
 
   function resetAll() {
     setDispatchedIssues({});
     setSelectedHomieId(null);
+    setOfficeMode('preview');
     setSelectedPropertyId(null);
     reset();
     setView('map');
@@ -168,25 +178,35 @@ export default function Home() {
             onBack={() => setView('map')}
             onTapIssue={dispatchIssue}
             onSelectHomie={selectHomie}
+            onWatchLive={watchLive}
           />
         )}
         {view === 'office' && officeHomie && (
           <div className="office-layout">
             <div className="office-scene">
-              <OfficeView
-                homies={homies}
-                state={state}
-                selectedHomieId={officeHomie.id}
-                onSelectHomie={(id) => setSelectedHomieId(id as HomieId)}
-              />
+              <div className="office-scene-inner">
+                <OfficeView
+                  homies={homies}
+                  state={state}
+                  selectedHomieId={officeHomie.id}
+                  onSelectHomie={(id) => {
+                    setSelectedHomieId(id as HomieId);
+                    setOfficeMode('preview');
+                  }}
+                />
+              </div>
             </div>
             <div className="office-rail">
               <AgentPanel
                 homie={officeHomie}
                 runtime={state.homies[officeHomie.id]}
+                mode={officeMode}
                 issue={homieIssue}
                 property={homieIssueProperty}
-                onClose={() => setSelectedHomieId(state.activeHomie ?? homies[0].id)}
+                onClose={() => {
+                  setSelectedHomieId(state.activeHomie ?? homies[0].id);
+                  setOfficeMode('live');
+                }}
               />
             </div>
           </div>

@@ -87,16 +87,19 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
       <svg
         className="pixel-svg"
         viewBox={`0 0 ${OFFICE_W} ${OFFICE_H}`}
-        preserveAspectRatio="none"
+        preserveAspectRatio="xMidYMid meet"
         style={{
           display: 'block',
           border: '4px solid #130d1f',
           boxShadow: '6px 6px 0 #000',
           background: '#3d2e4a',
-          width: '100%',
+          width: 'auto',
           height: '100%',
+          maxWidth: '100%',
           minHeight: 0,
           flex: 1,
+          aspectRatio: `${OFFICE_W} / ${OFFICE_H}`,
+          margin: '0 auto',
         }}
       >
         <defs>

@@ -251,7 +251,7 @@ svg, img, canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
   position: absolute;
   inset: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 640px;
+  grid-template-columns: minmax(0, 0.9fr) 640px;
   gap: 18px;
   padding: 18px;
   background:
@@ -269,6 +269,7 @@ svg, img, canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
 .office-scene {
   display: flex;
   align-items: stretch;
+  justify-content: center;
   overflow: hidden;
 }
 
@@ -284,6 +285,13 @@ svg, img, canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
 .office-rail > * {
   flex: 1 1 auto;
   min-width: 0;
+}
+
+.office-scene-inner {
+  width: min(100%, 920px);
+  height: 100%;
+  min-height: 0;
+  display: flex;
 }
 
 .office-panel {

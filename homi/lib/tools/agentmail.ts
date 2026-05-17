@@ -2,8 +2,25 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { AgentMailClient } from 'agentmail';
 
-const client = new AgentMailClient({ apiKey: process.env.AGENTMAIL_API_KEY! });
-const INBOX_ID = process.env.AGENTMAIL_INBOX_ID!;
+let client: AgentMailClient | null = null;
+
+function getAgentMailClient() {
+  if (client) return client;
+  const apiKey = process.env.AGENTMAIL_API_KEY;
+  if (!apiKey) {
+    throw new Error('AGENTMAIL_API_KEY is required for live AgentMail usage');
+  }
+  client = new AgentMailClient({ apiKey });
+  return client;
+}
+
+function getInboxId() {
+  const inboxId = process.env.AGENTMAIL_INBOX_ID;
+  if (!inboxId) {
+    throw new Error('AGENTMAIL_INBOX_ID is required for live AgentMail usage');
+  }
+  return inboxId;
+}
 
 export const agentMailSend = tool({
   description:
@@ -16,7 +33,8 @@ export const agentMailSend = tool({
       .describe('Plain text email body. Tenant-friendly, 2-4 sentences.'),
   }),
   execute: async ({ to, subject, body }) => {
-    const r = await client.inboxes.messages.send(INBOX_ID, {
+    const inboxId = getInboxId();
+    const r = await getAgentMailClient().inboxes.messages.send(inboxId, {
       to: [to],
       subject,
       text: body,
@@ -25,7 +43,7 @@ export const agentMailSend = tool({
       ok: true,
       messageId: r.messageId,
       threadId: r.threadId,
-      inboxUrl: `https://console.agentmail.to/inboxes/${INBOX_ID}/threads/${r.threadId}`,
+      inboxUrl: `https://console.agentmail.to/inboxes/${inboxId}/threads/${r.threadId}`,
     };
   },
 });

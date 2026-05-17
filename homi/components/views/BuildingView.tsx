@@ -18,6 +18,7 @@ interface BuildingViewProps {
   onBack: () => void;
   onTapIssue: (issue: Issue) => void;
   onSelectHomie: (id: string) => void;
+  onWatchLive: (id?: string | null) => void;
 }
 
 function BuildingCutaway({
@@ -299,12 +300,14 @@ function BuildingActivity({
   homies,
   state,
   onSelectHomie,
+  onWatchLive,
 }: {
   property: Property;
   issues: Issue[];
   homies: Homie[];
   state: DemoState;
   onSelectHomie: (id: string) => void;
+  onWatchLive: (id?: string | null) => void;
 }) {
   const propIssues = issues.filter((i) => i.propertyId === property.id);
   return (
@@ -355,13 +358,24 @@ function BuildingActivity({
             </div>
             {tag}
             {homie && (
-              <button
-                className="btn ghost"
-                style={{ fontSize: 8 }}
-                onClick={() => onSelectHomie(homie.id)}
-              >
-                VIEW HOMIE
-              </button>
+              <div className="row" style={{ gap: 8 }}>
+                <button
+                  className="btn ghost"
+                  style={{ fontSize: 8 }}
+                  onClick={() => onSelectHomie(homie.id)}
+                >
+                  VIEW HOMIE
+                </button>
+                {dispatched && !resolved && (
+                  <button
+                    className="btn"
+                    style={{ fontSize: 8 }}
+                    onClick={() => onWatchLive(homie.id)}
+                  >
+                    WATCH LIVE
+                  </button>
+                )}
+              </div>
             )}
           </div>
         );
@@ -379,6 +393,7 @@ export function BuildingView({
   onBack,
   onTapIssue,
   onSelectHomie,
+  onWatchLive,
 }: BuildingViewProps) {
   const [selectedFloor, setSelectedFloor] = useState<number>(() => {
     const first = issues.find((i) => i.propertyId === property.id && i.status !== 'resolved');
@@ -466,6 +481,7 @@ export function BuildingView({
               homies={homies}
               state={state}
               onSelectHomie={onSelectHomie}
+              onWatchLive={onWatchLive}
             />
           </div>
         </div>

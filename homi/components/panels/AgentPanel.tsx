@@ -9,11 +9,13 @@ import type { Homie } from '@/lib/data/homies';
 import type { Issue } from '@/lib/data/issues';
 import type { Property } from '@/lib/data/properties';
 import { ISSUE_TYPES } from '@/lib/data/issueTypes';
-import type { ActivityItem, HomieRuntime } from '../useEvents';
+import { TRANSCRIPTS } from '@/lib/data/transcripts';
+import type { ActivityItem, HomieRuntime, TranscriptLine } from '../useEvents';
 
 interface AgentPanelProps {
   homie: Homie;
   runtime: HomieRuntime | undefined;
+  mode: 'preview' | 'live';
   issue?: Issue | null;
   property?: Property | null;
   onClose: () => void;
@@ -77,9 +79,60 @@ function currentMode(homie: Homie) {
   return 'browser workflow';
 }
 
+function buildPreviewRuntime(homie: Homie): HomieRuntime {
+  const transcript = TRANSCRIPTS[homie.id];
+  const previewLines: TranscriptLine[] = transcript?.lines.map((line) => ({
+    who: line.who,
+    text: line.t,
+  })) ?? [];
+  const previewActivity: ActivityItem[] = previewLines.map((line) => ({
+    kind: 'transcript',
+    title:
+      line.who === 'you'
+        ? 'Homie spoke'
+        : line.who === 'them'
+          ? 'Counterparty replied'
+          : 'System note',
+    detail: line.text,
+    tone: line.who === 'them' ? 'success' : line.who === 'sys' ? 'info' : 'default',
+  }));
+
+  const runtime: HomieRuntime = {
+    id: homie.id,
+    status: 'idle',
+    task: homie.task,
+    transcript: previewLines,
+    browserPages: [],
+    activity: previewActivity,
+    summary: 'Previewing seeded homie activity',
+  };
+
+  if (transcript?.kind === 'browser') {
+    runtime.currentUrl = transcript.url;
+    runtime.browserPages = transcript.pages.map((page) => ({
+      url: page.url,
+      body: page.body,
+    }));
+  }
+
+  if (homie.id === 'brooks') {
+    runtime.lastMemoryRead = {
+      query: 'Ricky\'s Plumbing past deals',
+      result: '2 matches · avg $550',
+    };
+    runtime.lastMemoryWrite = {
+      key: 'deal.1247-castro.leak.2026-05-17',
+      value: 'vendor=ricky $640 booked 3:40pm saved $80',
+    };
+  }
+
+  return runtime;
+}
+
 function BrowserSurface({ runtime }: { runtime: HomieRuntime | undefined }) {
   const pages = runtime?.browserPages ?? [];
   const lastPage = pages[pages.length - 1];
+  const isRunning = runtime?.status === 'running';
   return (
     <div className="browser-shell">
       <div className="browser-bar">
@@ -107,8 +160,10 @@ function BrowserSurface({ runtime }: { runtime: HomieRuntime | undefined }) {
               {line || ' '}
             </div>
           ))
-        ) : (
+        ) : isRunning ? (
           <div style={{ color: '#8a6d3a' }}>waiting for live browser output…</div>
+        ) : (
+          <div style={{ color: '#8a6d3a' }}>no live browser run for this homie yet</div>
         )}
       </div>
     </div>
@@ -118,6 +173,7 @@ function BrowserSurface({ runtime }: { runtime: HomieRuntime | undefined }) {
 function TranscriptSurface({ runtime }: { runtime: HomieRuntime | undefined }) {
   const ref = useRef<HTMLDivElement | null>(null);
   const lines = runtime?.transcript ?? [];
+  const isRunning = runtime?.status === 'running';
 
   useEffect(() => {
     if (ref.current) ref.current.scrollTop = ref.current.scrollHeight;
@@ -125,7 +181,11 @@ function TranscriptSurface({ runtime }: { runtime: HomieRuntime | undefined }) {
 
   return (
     <div className="console" ref={ref} style={{ maxHeight: 240 }}>
-      {lines.length === 0 && <div className="line dim">waiting for the call to connect…</div>}
+      {lines.length === 0 && (
+        <div className="line dim">
+          {isRunning ? 'waiting for the call to connect…' : 'no live call in progress for this homie'}
+        </div>
+      )}
       {lines.map((ln, i) => (
         <div key={`${ln.text}-${i}`} className={`line ${ln.who}`}>
           <span className="dim">
@@ -167,27 +227,29 @@ function MemorySurface({ runtime }: { runtime: HomieRuntime | undefined }) {
   );
 }
 
-export function AgentPanel({ homie, runtime, issue, property, onClose }: AgentPanelProps) {
+export function AgentPanel({ homie, runtime, mode, issue, property, onClose }: AgentPanelProps) {
   const palette = DEFAULT_PALETTE;
   const def = HOMIE_HD_DEFS[homie.spriteIdx];
   const sponsorKey = def?.sponsor as SponsorKey | undefined;
   const sponsorSecondaryKey = def?.sponsorSecondary as SponsorKey | undefined;
   const sponsor = sponsorKey ? SPONSORS[sponsorKey] : null;
-  const activity = runtime?.activity ?? [];
+  const isPreview = mode === 'preview';
+  const displayRuntime = isPreview ? runtime ?? buildPreviewRuntime(homie) : runtime;
+  const activity = displayRuntime?.activity ?? [];
   const latestActivity = activity[activity.length - 1];
 
   const body = useMemo(() => {
-    if (homie.id === 'brooks') return <MemorySurface runtime={runtime} />;
-    if (homie.id === 'park' || homie.id === 'okafor') return <TranscriptSurface runtime={runtime} />;
-    return <BrowserSurface runtime={runtime} />;
-  }, [homie.id, runtime]);
+    if (homie.id === 'brooks') return <MemorySurface runtime={displayRuntime} />;
+    if (homie.id === 'park' || homie.id === 'okafor') return <TranscriptSurface runtime={displayRuntime} />;
+    return <BrowserSurface runtime={displayRuntime} />;
+  }, [displayRuntime, homie.id]);
 
   const statusTone =
-    runtime?.status === 'done'
+    displayRuntime?.status === 'done'
       ? 'success'
-      : runtime?.status === 'error'
+      : displayRuntime?.status === 'error'
         ? 'danger'
-        : runtime?.status === 'running'
+        : displayRuntime?.status === 'running'
           ? 'warn'
           : 'info';
 
@@ -219,10 +281,10 @@ export function AgentPanel({ homie, runtime, issue, property, onClose }: AgentPa
             </div>
             <div className="mono-font dim" style={{ fontSize: 16 }}>{homie.role}</div>
             <div className="mono-font" style={{ fontSize: 18, color: 'var(--ui-text)' }}>
-              {runtime?.task || homie.task}
+              {displayRuntime?.task || homie.task}
             </div>
             <div className="mono-font dim" style={{ fontSize: 15 }}>
-              {currentMode(homie)} · {runtime?.status || 'idle'}
+              {currentMode(homie)} · {isPreview ? 'preview' : displayRuntime?.status || 'waiting'}
             </div>
           </div>
           <button className="btn ghost" style={{ fontSize: 8 }} onClick={onClose}>
@@ -235,7 +297,7 @@ export function AgentPanel({ homie, runtime, issue, property, onClose }: AgentPa
             <div className="metric-grid">
               <div className="metric-card">
                 <div className="label">status</div>
-                <div className="value">{runtime?.status || 'idle'}</div>
+                <div className="value">{isPreview ? 'preview' : displayRuntime?.status || 'waiting'}</div>
               </div>
               <div className="metric-card">
                 <div className="label">latest event</div>
@@ -244,13 +306,19 @@ export function AgentPanel({ homie, runtime, issue, property, onClose }: AgentPa
               <div className="metric-card">
                 <div className="label">current url</div>
                 <div className="mono-font" style={{ fontSize: 16, color: 'var(--ui-text)' }}>
-                  {runtime?.currentUrl || 'n/a'}
+                  {displayRuntime?.currentUrl || 'n/a'}
                 </div>
               </div>
               <div className="metric-card">
                 <div className="label">summary</div>
                 <div className="mono-font" style={{ fontSize: 16, color: 'var(--ui-text)' }}>
-                  {runtime?.summary || latestActivity?.detail || 'Waiting for activity'}
+                  {displayRuntime?.summary ||
+                    latestActivity?.detail ||
+                    (displayRuntime?.status === 'running'
+                      ? 'Waiting for activity'
+                      : isPreview
+                        ? 'Showing seeded preview'
+                        : 'No live run yet')}
                 </div>
               </div>
             </div>
@@ -298,7 +366,13 @@ export function AgentPanel({ homie, runtime, issue, property, onClose }: AgentPa
                     </div>
                   </div>
                   <div className={`tag ${statusTone}`}>
-                    {runtime?.status === 'done' ? 'DONE' : runtime?.status === 'error' ? 'ERROR' : 'LIVE'}
+                    {displayRuntime?.status === 'done'
+                      ? 'DONE'
+                      : displayRuntime?.status === 'error'
+                        ? 'ERROR'
+                        : isPreview
+                          ? 'PREVIEW'
+                          : 'LIVE'}
                   </div>
                 </div>
               </div>
@@ -337,7 +411,11 @@ export function AgentPanel({ homie, runtime, issue, property, onClose }: AgentPa
                   <div className="activity-item info">
                     <div className="kicker">IDLE</div>
                     <div className="mono-font" style={{ fontSize: 16 }}>
-                      No runtime activity yet for this homie.
+                      {displayRuntime?.status === 'running'
+                        ? 'Run started, waiting for first activity event.'
+                        : isPreview
+                          ? 'Showing seeded preview activity for this homie.'
+                          : 'No live runtime activity yet for this homie.'}
                     </div>
                   </div>
                 )}
