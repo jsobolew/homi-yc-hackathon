@@ -47,6 +47,7 @@ export interface EmailRuntime {
 }
 
 export interface DemoState {
+  issueId: string | null;
   dispatchId: string | null;
   finished: boolean;
   homies: Partial<Record<HomieId, HomieRuntime>>;
@@ -59,6 +60,7 @@ export interface DemoState {
 }
 
 const initial: DemoState = {
+  issueId: null,
   dispatchId: null,
   finished: false,
   homies: {},
@@ -213,7 +215,12 @@ function reduce(state: DemoState, e: HomieEvent): DemoState {
   }
 }
 
-type Action = { kind: 'event'; event: HomieEvent } | { kind: 'reset' } | { kind: 'start'; id: string } | { kind: 'finish' };
+type Action =
+  | { kind: 'event'; event: HomieEvent }
+  | { kind: 'reset' }
+  | { kind: 'start'; issueId: string }
+  | { kind: 'dispatch'; id: string }
+  | { kind: 'finish' };
 
 function rootReducer(state: DemoState, action: Action): DemoState {
   switch (action.kind) {
@@ -222,7 +229,9 @@ function rootReducer(state: DemoState, action: Action): DemoState {
     case 'reset':
       return initial;
     case 'start':
-      return { ...initial, dispatchId: action.id };
+      return { ...initial, issueId: action.issueId };
+    case 'dispatch':
+      return { ...state, dispatchId: action.id };
     case 'finish':
       return { ...state, finished: true };
   }
@@ -232,9 +241,8 @@ export function useEvents() {
   const [state, dispatch] = useReducer(rootReducer, initial);
 
   useEffect(() => {
-    if (!state.dispatchId) return;
-    const id = state.dispatchId;
-    const es = new EventSource(`/api/stream/${id}`);
+    if (!state.issueId) return;
+    const es = new EventSource(`/api/stream?issueId=${encodeURIComponent(state.issueId)}`);
 
     es.onmessage = (m) => {
       try {
@@ -244,6 +252,14 @@ export function useEvents() {
         // ignore parse errors
       }
     };
+    es.addEventListener('dispatch', (m) => {
+      try {
+        const { dispatchId } = JSON.parse((m as MessageEvent).data) as { dispatchId: string };
+        dispatch({ kind: 'dispatch', id: dispatchId });
+      } catch {
+        // ignore parse errors
+      }
+    });
     es.addEventListener('finish', () => {
       dispatch({ kind: 'finish' });
       es.close();
@@ -255,17 +271,10 @@ export function useEvents() {
     return () => {
       es.close();
     };
-  }, [state.dispatchId]);
+  }, [state.issueId]);
 
-  const start = async (issueId: string) => {
-    const res = await fetch('/api/dispatch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ issueId }),
-    });
-    const data = (await res.json()) as { dispatchId: string };
-    dispatch({ kind: 'start', id: data.dispatchId });
-    return data.dispatchId;
+  const start = (issueId: string) => {
+    dispatch({ kind: 'start', issueId });
   };
 
   const reset = () => dispatch({ kind: 'reset' });
