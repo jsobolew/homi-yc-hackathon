@@ -87,7 +87,7 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
       <svg
         className="pixel-svg"
         viewBox={`0 0 ${OFFICE_W} ${OFFICE_H}`}
-        preserveAspectRatio="xMinYMid meet"
+        preserveAspectRatio="none"
         style={{
           display: 'block',
           border: '4px solid #130d1f',
