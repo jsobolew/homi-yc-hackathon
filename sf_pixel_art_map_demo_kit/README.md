@@ -1,6 +1,8 @@
 # SF Pixel-Art Map Demo Kit
 
 This kit gives you a ready-to-use, stylized pixel-art San Francisco map for a hackathon demo.
+The current generator keeps the original visual style, but builds the coastline, parks,
+and street network from real GIS geometry instead of hand-drawn city shapes.
 
 ## Files
 
@@ -10,8 +12,8 @@ This kit gives you a ready-to-use, stylized pixel-art San Francisco map for a ha
 - `index.html` — standalone demo with animated route and pins.
 - `sf_map_component.tsx` — React/Next-style component skeleton.
 - `generate_sf_pixel_map.py` — deterministic generator.
-- `curated_sf_features.json` — editable geometry for land, parks, roads, bridges, landmarks.
-- `sources/` — optional Overpass/DataSF fetch query and source notes.
+- `curated_sf_features.json` — styling metadata, labels, bridges, lakes, and landmarks.
+- `sources/` — downloaded official DataSF geometry plus optional Overpass query/source notes.
 
 ## Best demo usage
 
@@ -46,14 +48,14 @@ http://localhost:8000/index.html
 ## Regenerate the map
 
 ```bash
-python generate_sf_pixel_map.py --out . --features curated_sf_features.json
+/Users/jakubsobolewski/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 sources/fetch_sources.py
+/Users/jakubsobolewski/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 generate_sf_pixel_map.py --out .
 ```
 
-Optional, if you fetch OSM data first:
+Optional, if you want to append OSM major-road geometry as an extra source:
 
 ```bash
-python sources/fetch_sources.py
-python generate_sf_pixel_map.py --out . --features curated_sf_features.json --osm-json sources/sf_osm_features.json
+/Users/jakubsobolewski/.cache/codex-runtimes/codex-primary-runtime/dependencies/python/bin/python3 generate_sf_pixel_map.py --out . --osm-json sources/sf_osm_features.json
 ```
 
 ## Coordinate transform
@@ -94,7 +96,7 @@ function project(lon, lat, manifest) {
 
 ## Editing the art quickly
 
-For a YC demo, the best polish pass is manual:
+For a YC demo, the best polish pass is still manual:
 
 1. Regenerate the base PNG.
 2. Open `sf_pixel_map_320.png` in Aseprite, Photoshop, Figma, or any pixel editor.
@@ -104,10 +106,13 @@ For a YC demo, the best polish pass is manual:
 
 ## Source strategy
 
-This generated artifact is original stylized, code-drawn geometry. It does not embed a third-party poster, tile image, or commercial artwork.
+This generated artifact is original stylized pixel art rendered from GIS geometry.
+It does not embed a third-party poster, tile image, or commercial artwork.
 
 Useful data sources included for future upgrades:
 
+- DataSF `SF Shoreline and Islands`: official SF mainland shoreline and islands. The public map page is `rgcx-5tix`; the backing geometry layer used by the generator is `txuc-3kzm`.
+- DataSF `RPD Parks`: official San Francisco Recreation and Parks polygons.
 - DataSF `Streets - Active and Retired`: official SF street-centerline dataset. The Data.gov catalog lists it as public access and PDDL 1.0. See `sources/datasf_streets_source.txt`.
 - OpenStreetMap / Overpass API: use `sources/overpass_sf_major_features.overpassql` to fetch major roads, parks, and water features. If you use OSM data publicly, display attribution: `© OpenStreetMap contributors`.
 

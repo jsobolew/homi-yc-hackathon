@@ -17,7 +17,7 @@ import json
 import math
 import random
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Any, Callable, Iterable, Sequence
 
 from PIL import Image, ImageDraw
 
@@ -180,6 +180,109 @@ def composite_layer(base: Image.Image, layer: Image.Image, mask: Image.Image | N
         base.alpha_composite(Image.composite(layer, Image.new("RGBA", base.size, (0, 0, 0, 0)), mask))
 
 
+def polygon_area(pts: Sequence[tuple[int, int]]) -> float:
+    if len(pts) < 3:
+        return 0.0
+    area = 0.0
+    for (x1, y1), (x2, y2) in zip(pts, pts[1:] + pts[:1]):
+        area += x1 * y2 - x2 * y1
+    return abs(area) / 2.0
+
+
+def bounds_intersect(pts: Sequence[tuple[int, int]], width: int, height: int) -> bool:
+    xs = [x for x, _ in pts]
+    ys = [y for _, y in pts]
+    return max(xs) >= 0 and min(xs) < width and max(ys) >= 0 and min(ys) < height
+
+
+def geojson_outer_rings(geometry: dict[str, Any] | None) -> list[list[list[float]]]:
+    if not geometry:
+        return []
+    gtype = geometry.get("type")
+    coords = geometry.get("coordinates", [])
+    if gtype == "Polygon":
+        return [coords[0]] if coords else []
+    if gtype == "MultiPolygon":
+        return [poly[0] for poly in coords if poly]
+    return []
+
+
+def load_geojson_polygons(
+    geojson_path: Path | None,
+    projector: Projector,
+    min_area_px: float = 6.0,
+    property_filter: Callable[[dict[str, Any]], bool] | None = None,
+) -> list[list[tuple[int, int]]]:
+    if not geojson_path or not geojson_path.exists():
+        return []
+    data = load_json(geojson_path)
+    polygons: list[list[tuple[int, int]]] = []
+    for feature in data.get("features", []):
+        if property_filter and not property_filter(feature.get("properties", {})):
+            continue
+        for ring in geojson_outer_rings(feature.get("geometry")):
+            pts = projector.path(ring)
+            if len(pts) < 3:
+                continue
+            if not bounds_intersect(pts, projector.width, projector.height):
+                continue
+            if polygon_area(pts) < min_area_px:
+                continue
+            polygons.append(pts)
+    return polygons
+
+
+def iter_geojson_lines(geojson_path: Path | None) -> Iterable[tuple[dict[str, Any], list[list[list[float]]]]]:
+    if not geojson_path or not geojson_path.exists():
+        return
+    data = load_json(geojson_path)
+    for feature in data.get("features", []):
+        geometry = feature.get("geometry")
+        if not geometry:
+            continue
+        gtype = geometry.get("type")
+        coords = geometry.get("coordinates", [])
+        if gtype == "LineString":
+            yield feature.get("properties", {}), [coords]
+        elif gtype == "MultiLineString":
+            yield feature.get("properties", {}), list(coords)
+
+
+def load_datasf_streets(streets_geojson: Path | None) -> list[dict[str, Any]]:
+    roads: list[dict[str, Any]] = []
+    skip_layers = {
+        "PAPER",
+        "PAPER_FWYS",
+        "PAPER_WATER",
+        "PRIVATE",
+        "PRIVATE_PARKING",
+        "PSEUDO",
+        "STREETS_PEDESTRI",
+        "UPROW",
+    }
+    for props, paths in iter_geojson_lines(streets_geojson):
+        layer = props.get("layer")
+        classcode = props.get("classcode")
+        if layer in skip_layers or not classcode:
+            continue
+        if layer == "FREEWAYS" or classcode in {"0", "1", "2"}:
+            kind = "highway"
+        elif classcode == "3":
+            kind = "major"
+        elif classcode == "4":
+            kind = "minor"
+        else:
+            continue
+        for path in paths:
+            if len(path) >= 2:
+                roads.append({
+                    "name": props.get("streetname") or props.get("street_gc") or "STREET",
+                    "kind": kind,
+                    "path": path,
+                })
+    return roads
+
+
 def draw_water(img: Image.Image) -> None:
     draw = ImageDraw.Draw(img)
     w, h = img.size
@@ -198,11 +301,18 @@ def draw_water(img: Image.Image) -> None:
             draw.line([(x, y), (x + 7, y)], fill=PAL["fog"])
 
 
-def draw_land_and_masks(img: Image.Image, features: dict, p: Projector) -> tuple[Image.Image, Image.Image]:
+def draw_land_and_masks(
+    img: Image.Image,
+    features: dict,
+    p: Projector,
+    shoreline_geojson: Path | None = None,
+) -> tuple[Image.Image, Image.Image]:
     draw = ImageDraw.Draw(img)
-    land_polys = [p.path(features["land"]), p.path(features["marin_headlands"])]
-    for island in features.get("islands", []):
-        land_polys.append(p.path(island["polygon"]))
+    land_polys = load_geojson_polygons(shoreline_geojson, p, min_area_px=10.0)
+    if not land_polys:
+        land_polys = [p.path(features["land"]), p.path(features["marin_headlands"])]
+        for island in features.get("islands", []):
+            land_polys.append(p.path(island["polygon"]))
 
     # Shadow offset before land to provide chunky coastline depth.
     for pts in land_polys:
@@ -216,19 +326,24 @@ def draw_land_and_masks(img: Image.Image, features: dict, p: Projector) -> tuple
     land_draw = ImageDraw.Draw(img)
     fill_dither(land_draw, land_mask, PAL["land2"], step=5, rate=0.25, seed=10)
 
-    return land_mask, polygon_mask(img.size, [p.path(features["land"])])
+    return land_mask, polygon_mask(img.size, land_polys)
 
 
-def draw_parks_lakes(img: Image.Image, features: dict, p: Projector, sf_land_mask: Image.Image) -> None:
+def draw_parks_lakes(
+    img: Image.Image,
+    features: dict,
+    p: Projector,
+    sf_land_mask: Image.Image,
+    parks_geojson: Path | None = None,
+) -> None:
     layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(layer)
-    for park in features.get("parks", []):
-        pts = p.path(park["polygon"])
+    park_polys = load_geojson_polygons(parks_geojson, p, min_area_px=3.0)
+    if not park_polys:
+        park_polys = [p.path(park["polygon"]) for park in features.get("parks", [])]
+    for pts in park_polys:
         draw.polygon(pts, fill=PAL["park"])
         draw.line(pts + [pts[0]], fill=(48, 84, 68), width=1)
-        # Small tree pixels / grass variation
-        for i, (x, y) in enumerate(pts[:1]):
-            pass
     for lake in features.get("lakes", []):
         pts = p.path(lake["polygon"])
         draw.polygon(pts, fill=PAL["lake"])
@@ -238,7 +353,7 @@ def draw_parks_lakes(img: Image.Image, features: dict, p: Projector, sf_land_mas
     # Park texture after masking
     tex = Image.new("RGBA", img.size, (0, 0, 0, 0))
     texd = ImageDraw.Draw(tex)
-    park_mask = polygon_mask(img.size, [p.path(x["polygon"]) for x in features.get("parks", [])])
+    park_mask = polygon_mask(img.size, park_polys)
     fill_dither(texd, park_mask, PAL["park2"], step=4, rate=0.35, seed=11)
     composite_layer(img, tex, sf_land_mask)
 
@@ -273,23 +388,30 @@ def append_osm_roads(roads: list[dict], osm_path: Path | None) -> None:
         })
 
 
-def draw_roads(img: Image.Image, features: dict, p: Projector, sf_land_mask: Image.Image, osm_json: Path | None) -> None:
-    roads = list(features.get("roads", []))
-    append_osm_roads(roads, osm_json)
+def draw_roads(
+    img: Image.Image,
+    features: dict,
+    p: Projector,
+    sf_land_mask: Image.Image,
+    osm_json: Path | None,
+    streets_geojson: Path | None = None,
+) -> None:
+    roads = load_datasf_streets(streets_geojson)
+    if not roads:
+        roads = list(features.get("roads", []))
+        append_osm_roads(roads, osm_json)
 
-    # Grid roads: generated stylized neighborhoods, clipped to SF land.
-    grid_roads: list[dict] = []
-    # West-side Sunset/Richmond grid.
-    for lon in [-122.505, -122.497, -122.489, -122.481, -122.469, -122.461, -122.453, -122.445]:
-        grid_roads.append({"name":"GRID", "kind":"grid", "path":[[lon,37.715],[lon,37.792]]})
-    for lat in [37.720,37.728,37.736,37.744,37.752,37.760,37.768,37.776,37.784,37.792]:
-        grid_roads.append({"name":"GRID", "kind":"grid", "path":[[-122.512,lat],[-122.437,lat]]})
-    # Downtown / SOMA blocks.
-    for lon in [-122.421, -122.416, -122.411, -122.406, -122.401, -122.396, -122.391]:
-        grid_roads.append({"name":"DT GRID", "kind":"grid", "path":[[lon,37.764],[lon,37.806]]})
-    for lat in [37.768,37.773,37.778,37.783,37.788,37.793,37.798,37.803]:
-        grid_roads.append({"name":"DT GRID", "kind":"grid", "path":[[-122.430,lat],[-122.386,lat]]})
-    roads = grid_roads + roads
+        # Fallback only: generated stylized neighborhood grids.
+        grid_roads: list[dict] = []
+        for lon in [-122.505, -122.497, -122.489, -122.481, -122.469, -122.461, -122.453, -122.445]:
+            grid_roads.append({"name": "GRID", "kind": "grid", "path": [[lon, 37.715], [lon, 37.792]]})
+        for lat in [37.720, 37.728, 37.736, 37.744, 37.752, 37.760, 37.768, 37.776, 37.784, 37.792]:
+            grid_roads.append({"name": "GRID", "kind": "grid", "path": [[-122.512, lat], [-122.437, lat]]})
+        for lon in [-122.421, -122.416, -122.411, -122.406, -122.401, -122.396, -122.391]:
+            grid_roads.append({"name": "DT GRID", "kind": "grid", "path": [[lon, 37.764], [lon, 37.806]]})
+        for lat in [37.768, 37.773, 37.778, 37.783, 37.788, 37.793, 37.798, 37.803]:
+            grid_roads.append({"name": "DT GRID", "kind": "grid", "path": [[-122.430, lat], [-122.386, lat]]})
+        roads = grid_roads + roads
 
     road_layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
     draw = ImageDraw.Draw(road_layer)
@@ -436,21 +558,30 @@ def write_manifest(out_dir: Path, features: dict, width: int, height: int) -> No
             "nativeResolution": f"{width}x{height}",
             "displayResolution": "960px to 1280px wide"
         },
-        "attributionNote": "Curated stylized geometry. If regenerated with OSM/Overpass data, display: © OpenStreetMap contributors. DataSF street source is PDDL 1.0."
+        "attributionNote": "Base geometry comes from official DataSF shoreline, parks, and streets datasets. If regenerated with OSM/Overpass data, also display: © OpenStreetMap contributors."
     }
     (out_dir / "sf_pixel_map_manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
 
 
-def generate(out_dir: Path, features_path: Path, size: int = 320, scale: int = 4, osm_json: Path | None = None) -> None:
+def generate(
+    out_dir: Path,
+    features_path: Path,
+    size: int = 320,
+    scale: int = 4,
+    osm_json: Path | None = None,
+    shoreline_geojson: Path | None = None,
+    streets_geojson: Path | None = None,
+    parks_geojson: Path | None = None,
+) -> None:
     out_dir.mkdir(parents=True, exist_ok=True)
     features = load_json(features_path)
     img = Image.new("RGBA", (size, size), PAL["water"] + (255,))
     p = Projector(features["bbox"], size, size)
 
     draw_water(img)
-    _, sf_land_mask = draw_land_and_masks(img, features, p)
-    draw_parks_lakes(img, features, p, sf_land_mask)
-    draw_roads(img, features, p, sf_land_mask, osm_json)
+    _, sf_land_mask = draw_land_and_masks(img, features, p, shoreline_geojson=shoreline_geojson)
+    draw_parks_lakes(img, features, p, sf_land_mask, parks_geojson=parks_geojson)
+    draw_roads(img, features, p, sf_land_mask, osm_json, streets_geojson=streets_geojson)
     draw_buildings(img, p, sf_land_mask)
     draw_bridges(img, features, p)
     draw_landmarks(img, features, p)
@@ -470,8 +601,20 @@ def main() -> None:
     ap.add_argument("--size", type=int, default=320, help="Native pixel resolution")
     ap.add_argument("--scale", type=int, default=4, help="Nearest-neighbor upscale factor")
     ap.add_argument("--osm-json", type=Path, default=None, help="Optional Overpass JSON export using out geom")
+    ap.add_argument("--shoreline-geojson", type=Path, default=Path("sources/sf_shoreline.geojson"), help="Official DataSF shoreline GeoJSON")
+    ap.add_argument("--streets-geojson", type=Path, default=Path("sources/datasf_streets.geojson"), help="Official DataSF streets GeoJSON")
+    ap.add_argument("--parks-geojson", type=Path, default=Path("sources/datasf_parks.geojson"), help="Official DataSF parks GeoJSON")
     args = ap.parse_args()
-    generate(args.out, args.features, args.size, args.scale, args.osm_json)
+    generate(
+        args.out,
+        args.features,
+        args.size,
+        args.scale,
+        args.osm_json,
+        shoreline_geojson=args.shoreline_geojson,
+        streets_geojson=args.streets_geojson,
+        parks_geojson=args.parks_geojson,
+    )
 
 
 if __name__ == "__main__":
