@@ -1,0 +1,4 @@
+- browser use agent will run 50 searches in paraller, we will see on his screen 50 sessions running
+	- then after that if it gets a task find cheapest quote it will show in each window the final quote it fould for this search
+- same idea for calls, we will see 10 conversations happening in parallel, we want to see transcript appearing live and when then convo fiishes we will see the TLDR/outcome of the convo for example the qute we got after haggling
+- 
