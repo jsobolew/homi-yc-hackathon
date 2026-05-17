@@ -226,7 +226,7 @@ export function AgentPanel({ homie, runtime, issue, property, onClose }: AgentPa
               borderBottom: '3px solid var(--c-line)',
             }}
           >
-            <SponsorLogo keyName={sponsorKey} size={56} pixelated={true} />
+            <SponsorLogo keyName={sponsorKey} size={56} />
             <div className="col" style={{ gap: 2, flex: 1 }}>
               <div className="pixel-font" style={{ fontSize: 8, color: 'var(--ui-muted)' }}>
                 SPONSORED HOMIE

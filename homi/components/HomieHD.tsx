@@ -57,7 +57,7 @@ export function HomieHD({
             pointerEvents: 'none',
           }}
         >
-          <SponsorLogo keyName={sponsor} size={logoSize} pixelated={true} showLabel={false} />
+          <SponsorLogo keyName={sponsor} size={logoSize} />
         </div>
       )}
       {secondary && (
@@ -75,7 +75,7 @@ export function HomieHD({
             overflow: 'hidden',
           }}
         >
-          <SponsorLogo keyName={secondary} size={secSize} pixelated={true} showLabel={false} />
+          <SponsorLogo keyName={secondary} size={secSize} />
         </div>
       )}
     </div>
@@ -128,7 +128,7 @@ export function HomieDeskHD({
             pointerEvents: 'none',
           }}
         >
-          <SponsorLogo keyName={sponsor} size={logoSize} pixelated={true} showLabel={false} />
+          <SponsorLogo keyName={sponsor} size={logoSize} />
         </div>
       )}
       {secondary && (
@@ -146,7 +146,7 @@ export function HomieDeskHD({
             overflow: 'hidden',
           }}
         >
-          <SponsorLogo keyName={secondary} size={secSize} pixelated={true} showLabel={false} />
+          <SponsorLogo keyName={secondary} size={secSize} />
         </div>
       )}
     </div>

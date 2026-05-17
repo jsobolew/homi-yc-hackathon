@@ -2,14 +2,11 @@
 
 import { Pixel } from '../Pixel';
 import { HomieDeskHD } from '../HomieHD';
-import { SponsorLogo } from '../SponsorLogo';
 import {
   DEFAULT_PALETTE,
-  HOMIE_HD_DEFS,
   SPR_PLANT,
   SPR_WATERCOOLER,
 } from '../sprites';
-import { SPONSORS, type SponsorKey } from '../SponsorLogo';
 import type { Homie, HomieMode } from '@/lib/data/homies';
 import type { DemoState } from '../useEvents';
 
@@ -45,34 +42,11 @@ function deriveMode(homie: Homie, state: DemoState): { mode: 'phone' | 'laptop';
   return { mode: m === 'phone' ? 'phone' : 'laptop', pulsing: false };
 }
 
-// All sponsors that should appear in the POWERED BY strip — primaries + secondaries, deduped, in homie order.
-function collectSponsors(homies: Homie[]): Array<{ key: SponsorKey; tag: string }> {
-  const out: Array<{ key: SponsorKey; tag: string }> = [];
-  const seen = new Set<SponsorKey>();
-  for (const h of homies) {
-    const def = HOMIE_HD_DEFS[h.spriteIdx];
-    if (!def) continue;
-    const last = h.name.split(' ')[1] ?? h.name;
-    const primary = def.sponsor;
-    if (primary && !seen.has(primary)) {
-      out.push({ key: primary, tag: `${last}'s homie` });
-      seen.add(primary);
-    }
-    const secondary = def.sponsorSecondary;
-    if (secondary && !seen.has(secondary)) {
-      out.push({ key: secondary, tag: `${last} · assist` });
-      seen.add(secondary);
-    }
-  }
-  return out;
-}
-
 export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: OfficeViewProps) {
   const palette = DEFAULT_PALETTE;
 
   const onCallCount = homies.filter((h) => deriveMode(h, state).mode === 'phone').length;
   const browsingCount = homies.length - onCallCount;
-  const sponsorCards = collectSponsors(homies);
 
   return (
     <div
@@ -106,73 +80,18 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
         </div>
       </div>
 
-      {/* POWERED BY sponsor strip — shows all primary + secondary sponsors, deduped */}
-      <div
-        style={{
-          width: '100%',
-          maxWidth: 1180,
-          marginBottom: 12,
-          padding: '10px 16px',
-          background: 'linear-gradient(90deg, #0e1024 0%, #2b1f3a 50%, #0e1024 100%)',
-          border: '3px solid var(--ui-border)',
-          boxShadow: '4px 4px 0 var(--c-dark)',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 16,
-        }}
-      >
-        <div
-          className="pixel-font"
-          style={{ fontSize: 10, color: 'var(--ui-accent-2)', whiteSpace: 'nowrap' }}
-        >
-          POWERED BY
-        </div>
-        <div style={{ flex: 1, display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
-          {sponsorCards.map(({ key, tag }) => {
-            const entry = SPONSORS[key];
-            if (!entry) return null;
-            return (
-              <div
-                key={key}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 8,
-                  padding: '4px 8px',
-                  background: 'var(--ui-panel)',
-                  border: '2px solid var(--c-line)',
-                }}
-              >
-                <SponsorLogo keyName={key} size={44} pixelated={true} />
-                <div className="col" style={{ gap: 0 }}>
-                  <div
-                    className="pixel-font"
-                    style={{ fontSize: 9, color: 'var(--ui-accent-2)' }}
-                  >
-                    {entry.name.toUpperCase()}
-                  </div>
-                  <div className="mono-font dim" style={{ fontSize: 12 }}>
-                    {tag}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
       <svg
         className="pixel-svg"
-        width={OFFICE_W * 9}
-        height={OFFICE_H * 9}
         viewBox={`0 0 ${OFFICE_W} ${OFFICE_H}`}
+        preserveAspectRatio="xMidYMid meet"
         style={{
           display: 'block',
           border: '4px solid #1a1326',
           boxShadow: '6px 6px 0 #000',
           background: '#3d2e4a',
+          height: 'min(85vh, 1400px)',
+          width: 'auto',
           maxWidth: '100%',
-          height: 'auto',
         }}
       >
         <defs>
