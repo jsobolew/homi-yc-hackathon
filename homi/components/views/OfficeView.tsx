@@ -53,7 +53,7 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
       style={{
         position: 'relative',
         width: '100%',
-        height: '100%',
+        height: 'auto',
         background:
           'linear-gradient(180deg, rgba(61, 46, 74, 0.96) 0%, rgba(26, 19, 38, 0.98) 100%)',
         display: 'flex',
@@ -62,7 +62,6 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
         padding: '18px 18px 14px',
         border: '4px solid #1a1326',
         boxShadow: '8px 8px 0 #000',
-        minHeight: 0,
       }}
     >
       <div className="row" style={{ width: '100%', marginBottom: 14 }}>
@@ -93,13 +92,10 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
           border: '4px solid #130d1f',
           boxShadow: '6px 6px 0 #000',
           background: '#3d2e4a',
-          width: 'auto',
-          height: '100%',
+          width: '100%',
+          height: 'auto',
           maxWidth: '100%',
-          minHeight: 0,
-          flex: 1,
           aspectRatio: `${OFFICE_W} / ${OFFICE_H}`,
-          margin: '0 auto',
         }}
       >
         <defs>

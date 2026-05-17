@@ -268,7 +268,7 @@ svg, img, canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
 
 .office-scene {
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   justify-content: center;
   overflow: hidden;
 }
@@ -288,9 +288,9 @@ svg, img, canvas { image-rendering: pixelated; image-rendering: crisp-edges; }
 }
 
 .office-scene-inner {
-  width: min(100%, 920px);
-  height: 100%;
-  min-height: 0;
+  width: min(100%, 780px);
+  max-width: 780px;
+  height: auto;
   display: flex;
 }
 
