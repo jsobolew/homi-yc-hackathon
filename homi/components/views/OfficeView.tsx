@@ -51,17 +51,21 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
   return (
     <div
       style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'linear-gradient(180deg, #2b1f3a 0%, #1a1326 100%)',
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        background:
+          'linear-gradient(180deg, rgba(61, 46, 74, 0.96) 0%, rgba(26, 19, 38, 0.98) 100%)',
         display: 'flex',
         flexDirection: 'column',
-        alignItems: 'center',
-        padding: '20px 24px',
-        overflow: 'auto',
+        alignItems: 'stretch',
+        padding: '18px 18px 14px',
+        border: '4px solid #1a1326',
+        boxShadow: '8px 8px 0 #000',
+        minHeight: 0,
       }}
     >
-      <div className="row" style={{ width: '100%', maxWidth: 1180, marginBottom: 14 }}>
+      <div className="row" style={{ width: '100%', marginBottom: 14 }}>
         <div className="pixel-font" style={{ fontSize: 14, color: 'var(--ui-accent-2)' }}>
           THE HOMI OFFICE · YOUR AGENTS AT WORK
         </div>
@@ -83,15 +87,16 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
       <svg
         className="pixel-svg"
         viewBox={`0 0 ${OFFICE_W} ${OFFICE_H}`}
-        preserveAspectRatio="xMidYMid meet"
+        preserveAspectRatio="xMinYMid meet"
         style={{
           display: 'block',
-          border: '4px solid #1a1326',
+          border: '4px solid #130d1f',
           boxShadow: '6px 6px 0 #000',
           background: '#3d2e4a',
-          height: 'min(85vh, 1400px)',
-          width: 'auto',
-          maxWidth: '100%',
+          width: '100%',
+          height: '100%',
+          minHeight: 0,
+          flex: 1,
         }}
       >
         <defs>
@@ -102,7 +107,7 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
           </pattern>
         </defs>
 
-        {/* Floor (entire canvas, will be covered by window + walls on top) */}
+        {/* Floor */}
         <rect x="0" y="0" width={OFFICE_W} height={OFFICE_H} fill="url(#floor-pattern)" />
 
         {/* Walls — outer frame */}
@@ -111,85 +116,49 @@ export function OfficeView({ homies, state, selectedHomieId, onSelectHomie }: Of
         <rect x="0" y="0" width="2" height={OFFICE_H} fill={palette.K} />
         <rect x={OFFICE_W - 2} y="0" width="2" height={OFFICE_H} fill={palette.K} />
 
-        {/* ===== Window scene: sky gradient + Golden Gate + bay ===== */}
-        {/* Window inset: x=3..107, y=2..26 (24 tall) */}
-        {/* Sky bands — dusk over the bay */}
-        <rect x="3" y="2" width="104" height="4" fill="#3d2e4a" />
-        <rect x="3" y="6" width="104" height="3" fill="#5e3a85" />
-        <rect x="3" y="9" width="104" height="3" fill="#8b5cb8" />
-        <rect x="3" y="12" width="104" height="3" fill="#c25e85" />
-        <rect x="3" y="15" width="104" height="2" fill="#e85d3e" />
-        <rect x="3" y="17" width="104" height="2" fill="#ffd966" />
-        <rect x="3" y="19" width="104" height="2" fill="#e8b97a" />
+        {/* Window wall */}
+        <rect x="2" y="2" width="106" height="30" fill="#20172d" />
+        <rect x="4" y="4" width="102" height="26" fill="#3d2e4a" />
+        <rect x="4" y="4" width="102" height="4" fill="#4f3769" />
+        <rect x="4" y="8" width="102" height="4" fill="#6b478d" />
+        <rect x="4" y="12" width="102" height="4" fill="#96518b" />
+        <rect x="4" y="16" width="102" height="3" fill="#cf5a68" />
+        <rect x="4" y="19" width="102" height="3" fill="#ea8352" />
+        <rect x="4" y="22" width="102" height="2" fill="#ffd966" />
+        <rect x="4" y="24" width="102" height="3" fill="#318bb2" />
+        <rect x="4" y="27" width="102" height="3" fill="#1a5379" />
 
-        {/* Distant Marin headland silhouette (left) */}
-        <polygon points="3,21 8,18 14,16 22,18 28,21" fill="#1f2440" />
-        <polygon points="3,21 10,19 16,20 22,21" fill="#2a1854" />
+        <polygon points="4,25 14,18 24,17 33,20 42,23 56,25" fill="#1b2040" />
+        <polygon points="62,25 72,20 82,16 92,17 100,20 106,24 106,25" fill="#1b2040" />
+        <polygon points="4,26 16,21 28,22 41,25" fill="#28194f" />
+        <polygon points="73,25 84,21 97,22 106,24 106,26" fill="#28194f" />
 
-        {/* Distant Presidio headland silhouette (right) */}
-        <polygon points="84,21 90,17 96,15 102,18 107,21" fill="#1f2440" />
-        <polygon points="86,21 94,19 100,20 107,21" fill="#2a1854" />
-
-        {/* Bay water — calm horizontal bands */}
-        <rect x="3" y="21" width="104" height="2" fill="#2b9fc9" />
-        <rect x="3" y="23" width="104" height="2" fill="#1e6f9a" />
-        <rect x="3" y="25" width="104" height="1" fill="#0e1024" />
-
-        {/* ===== Golden Gate Bridge ===== */}
-        {/* Main suspension cables — curve sagging from tower tops to mid-deck and back up */}
-        {/* Left half: x=30->54, y=8->17 sag */}
-        <polygon points="30,7 31,7 32,8 33,9 35,11 38,13 42,15 46,16 50,16 54,17 54,18 50,17 46,17 42,16 38,14 35,12 33,10 32,9 31,8 30,8" fill="#1a1326" />
-        {/* Right half: x=54->78, y=17->8 rise */}
-        <polygon points="54,17 58,16 62,16 66,15 70,13 73,11 75,9 76,8 77,7 78,7 78,8 77,8 76,9 75,10 73,12 70,14 66,16 62,17 58,17 54,18" fill="#1a1326" />
-
-        {/* Suspender cables (verticals from main cable down to deck) */}
-        {[34, 38, 42, 46, 50, 54, 58, 62, 66, 70, 74].map((x) => {
-          // Approximate cable y at this x — parabolic sag
-          const t = (x - 30) / 48;
-          const cableY = 8 + Math.round(9 * 4 * t * (1 - t));
-          return <line key={`sus${x}`} x1={x} y1={cableY} x2={x} y2={20} stroke="#1a1326" strokeWidth="0.4" />;
+        <polygon points="23,10 26,10 30,12 34,14 40,18 49,21 57,22 57,23 49,22 39,19 34,15 30,13 26,11 23,11" fill="#1a1326" />
+        <polygon points="57,22 66,21 74,19 80,16 84,13 87,11 89,10 91,10 91,11 89,11 87,12 84,14 80,17 74,20 66,22 57,23" fill="#1a1326" />
+        {[29, 34, 39, 44, 49, 54, 59, 64, 69, 74, 79, 84].map((x) => {
+          const t = (x - 23) / 68;
+          const cableY = 10 + Math.round(12 * 4 * t * (1 - t));
+          return <line key={`sus${x}`} x1={x} y1={cableY} x2={x} y2={24} stroke="#1a1326" strokeWidth="0.4" />;
         })}
+        <rect x="22" y="24" width="70" height="1" fill="#1a1326" />
+        <rect x="27" y="9" width="3" height="16" fill="#c14a4a" />
+        <rect x="26" y="9" width="5" height="1" fill="#c14a4a" />
+        <rect x="28" y="8" width="1" height="1" fill="#c14a4a" />
+        <rect x="84" y="9" width="3" height="16" fill="#c14a4a" />
+        <rect x="83" y="9" width="5" height="1" fill="#c14a4a" />
+        <rect x="85" y="8" width="1" height="1" fill="#c14a4a" />
+        <rect x="18" y="23" width="76" height="1" fill="#fff1d1" opacity="0.22" />
 
-        {/* Bridge deck (roadway) — spans between towers */}
-        <rect x="27" y="20" width="54" height="1" fill="#1a1326" />
-        <rect x="27" y="20" width="54" height="0.5" fill="#3d2e4a" />
-
-        {/* Left tower (international orange) */}
-        <rect x="29" y="6" width="3" height="15" fill="#c14a4a" />
-        <rect x="28" y="6" width="5" height="1" fill="#c14a4a" />
-        <rect x="29" y="8" width="3" height="1" fill="#8a2e2e" />
-        <rect x="29" y="14" width="3" height="1" fill="#8a2e2e" />
-        {/* Tower top crown */}
-        <rect x="30" y="5" width="1" height="1" fill="#c14a4a" />
-
-        {/* Right tower */}
-        <rect x="76" y="6" width="3" height="15" fill="#c14a4a" />
-        <rect x="75" y="6" width="5" height="1" fill="#c14a4a" />
-        <rect x="76" y="8" width="3" height="1" fill="#8a2e2e" />
-        <rect x="76" y="14" width="3" height="1" fill="#8a2e2e" />
-        <rect x="77" y="5" width="1" height="1" fill="#c14a4a" />
-
-        {/* Fog rolling in at the base of the bridge */}
-        <rect x="20" y="19" width="70" height="1" fill="#e8d4a8" opacity="0.35" />
-        <rect x="30" y="20" width="50" height="1" fill="#e8d4a8" opacity="0.25" />
-
-        {/* Window mullions — 6 vertical bars give the "looking through glass" feel */}
-        <rect x="3" y="2" width="104" height="1" fill="#1a1326" />
-        <rect x="3" y="26" width="104" height="1" fill="#1a1326" />
-        {Array.from({ length: 6 }).map((_, i) => (
-          <rect key={`wf${i}`} x={3 + i * 17} y="2" width="0.7" height="24" fill="#1a1326" />
+        {[4, 24, 46, 68, 88, 106].map((x, i) => (
+          <rect key={`mullion-${i}`} x={x} y="4" width="1" height="26" fill="#1a1326" />
         ))}
-        <rect x={106.3} y="2" width="0.7" height="24" fill="#1a1326" />
-        {/* Horizontal mullion at mid-height to break up the panes */}
-        <rect x="3" y="13" width="104" height="0.5" fill="#1a1326" opacity="0.6" />
+        <rect x="4" y="16" width="102" height="1" fill="#1a1326" opacity="0.75" />
+        <rect x="2" y="31" width="106" height="3" fill="#2a1d37" />
+        <rect x="2" y="31" width="106" height="1" fill="#110b1b" />
 
-        {/* ===== Wall band under the window — paneling strip ===== */}
-        <rect x="3" y="27" width="104" height="2" fill="#3d2e4a" />
-        <rect x="3" y="27" width="104" height="0.6" fill="#1a1326" />
-
-        {/* ===== Floor accent (central rug between desk rows) ===== */}
-        <rect x="20" y="79" width="70" height="3" fill="#8b5cb8" opacity="0.55" />
-        <rect x="22" y="79" width="66" height="1" fill="#c14a4a" opacity="0.4" />
+        {/* Floor accent */}
+        <rect x="13" y="84" width="84" height="4" fill="#8b5cb8" opacity="0.5" />
+        <rect x="16" y="84" width="78" height="1" fill="#c14a4a" opacity="0.5" />
 
         {/* ===== Decorations — break corner (bottom-left) ===== */}
         {/* Watercooler */}

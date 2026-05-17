@@ -13,6 +13,26 @@ export interface BrowserPageView {
   body: string[];
 }
 
+export interface ActivityItem {
+  kind:
+    | 'started'
+    | 'transcript'
+    | 'browser_navigate'
+    | 'browser_action'
+    | 'browser_page'
+    | 'memory_read'
+    | 'memory_write'
+    | 'payment'
+    | 'email_sent'
+    | 'handoff_in'
+    | 'handoff_out'
+    | 'done'
+    | 'error';
+  title: string;
+  detail?: string;
+  tone?: 'default' | 'success' | 'warn' | 'danger' | 'info';
+}
+
 export interface HomieRuntime {
   id: HomieId;
   status: 'idle' | 'running' | 'done' | 'error';
@@ -20,6 +40,7 @@ export interface HomieRuntime {
   transcript: TranscriptLine[];
   currentUrl?: string;
   browserPages: BrowserPageView[];
+  activity: ActivityItem[];
   lastMemoryWrite?: { key: string; value: string };
   lastMemoryRead?: { query: string; result: string };
   summary?: string;
@@ -81,6 +102,7 @@ function ensureHomie(state: DemoState, id: HomieId): HomieRuntime {
     task: '',
     transcript: [],
     browserPages: [],
+    activity: [],
   };
 }
 
@@ -90,6 +112,19 @@ function updateHomie(state: DemoState, id: HomieId, patch: Partial<HomieRuntime>
     ...state,
     homies: { ...state.homies, [id]: { ...cur, ...patch } },
   };
+}
+
+function pushActivity(
+  state: DemoState,
+  homieId: HomieId,
+  item: ActivityItem,
+  patch: Partial<HomieRuntime> = {},
+): DemoState {
+  const cur = ensureHomie(state, homieId);
+  return updateHomie(state, homieId, {
+    ...patch,
+    activity: [...cur.activity, item],
+  });
 }
 
 function reduce(state: DemoState, e: HomieEvent): DemoState {
@@ -102,6 +137,14 @@ function reduce(state: DemoState, e: HomieEvent): DemoState {
           task: e.task,
           transcript: [],
           browserPages: [],
+          activity: [
+            {
+              kind: 'started',
+              title: 'Dispatch started',
+              detail: e.task,
+              tone: 'info',
+            },
+          ],
           summary: undefined,
         }),
         activeHomie: e.homieId,
@@ -109,35 +152,90 @@ function reduce(state: DemoState, e: HomieEvent): DemoState {
 
     case 'transcript_line': {
       const cur = ensureHomie(state, e.homieId);
-      return updateHomie(state, e.homieId, {
-        transcript: [...cur.transcript, { who: e.who, text: e.text }],
-      });
+      return pushActivity(
+        state,
+        e.homieId,
+        {
+          kind: 'transcript',
+          title:
+            e.who === 'you'
+              ? 'Homie spoke'
+              : e.who === 'them'
+                ? 'Vendor replied'
+                : 'System note',
+          detail: e.text,
+          tone: e.who === 'them' ? 'success' : e.who === 'sys' ? 'info' : 'default',
+        },
+        {
+          transcript: [...cur.transcript, { who: e.who, text: e.text }],
+        },
+      );
     }
 
     case 'browser_navigate':
-      return updateHomie(state, e.homieId, { currentUrl: e.url });
+      return pushActivity(state, e.homieId, {
+        kind: 'browser_navigate',
+        title: 'Navigated browser',
+        detail: e.url,
+        tone: 'info',
+      }, { currentUrl: e.url });
 
     case 'browser_page': {
       const cur = ensureHomie(state, e.homieId);
-      return updateHomie(state, e.homieId, {
-        currentUrl: e.url,
-        browserPages: [...cur.browserPages, { url: e.url, body: e.body }],
-      });
+      return pushActivity(
+        state,
+        e.homieId,
+        {
+          kind: 'browser_page',
+          title: 'Captured page snapshot',
+          detail: `${e.url} · ${e.body.length} visible lines`,
+          tone: 'info',
+        },
+        {
+          currentUrl: e.url,
+          browserPages: [...cur.browserPages, { url: e.url, body: e.body }],
+        },
+      );
     }
 
     case 'browser_action': {
       const cur = ensureHomie(state, e.homieId);
-      return updateHomie(state, e.homieId, {
-        transcript: [...cur.transcript, { who: 'sys', text: e.action }],
-      });
+      return pushActivity(
+        state,
+        e.homieId,
+        {
+          kind: 'browser_action',
+          title: 'Browser action',
+          detail: e.action,
+          tone: 'default',
+        },
+        {
+          transcript: [...cur.transcript, { who: 'sys', text: e.action }],
+        },
+      );
     }
 
     case 'browser_frame':
-      return updateHomie(state, e.homieId, { currentUrl: e.sessionUrl });
+      return pushActivity(
+        state,
+        e.homieId,
+        {
+          kind: 'browser_page',
+          title: 'Live browser session attached',
+          detail: e.sessionUrl,
+          tone: 'info',
+        },
+        { currentUrl: e.sessionUrl },
+      );
 
     case 'memory_write':
       return {
-        ...updateHomie(state, e.homieId, {
+        ...pushActivity(state, e.homieId, {
+          kind: 'memory_write',
+          title: 'Wrote shared memory',
+          detail: `${e.key} · ${e.value}`,
+          tone: 'success',
+        }, {
           lastMemoryWrite: { key: e.key, value: e.value },
         }),
         memoryLog: [
@@ -148,7 +246,12 @@ function reduce(state: DemoState, e: HomieEvent): DemoState {
 
     case 'memory_read':
       return {
-        ...updateHomie(state, e.homieId, {
+        ...pushActivity(state, e.homieId, {
+          kind: 'memory_read',
+          title: 'Read shared memory',
+          detail: `${e.query} · ${e.result}`,
+          tone: 'warn',
+        }, {
           lastMemoryRead: { query: e.query, result: e.result },
         }),
         memoryLog: [
@@ -158,24 +261,42 @@ function reduce(state: DemoState, e: HomieEvent): DemoState {
       };
 
     case 'payment':
-      return {
-        ...state,
-        payments: [
-          ...state.payments,
-          {
-            amountCents: e.amountCents,
-            vendor: e.vendor,
-            chargeId: e.chargeId,
-            dashboardUrl: e.dashboardUrl,
-          },
-        ],
-      };
+      return pushActivity(
+        {
+          ...state,
+          payments: [
+            ...state.payments,
+            {
+              amountCents: e.amountCents,
+              vendor: e.vendor,
+              chargeId: e.chargeId,
+              dashboardUrl: e.dashboardUrl,
+            },
+          ],
+        },
+        e.homieId,
+        {
+          kind: 'payment',
+          title: 'Payment processed',
+          detail: `${e.vendor} · $${(e.amountCents / 100).toLocaleString()} · ${e.chargeId}`,
+          tone: 'success',
+        },
+      );
 
     case 'email_sent':
-      return {
-        ...state,
-        emails: [...state.emails, { to: e.to, subject: e.subject }],
-      };
+      return pushActivity(
+        {
+          ...state,
+          emails: [...state.emails, { to: e.to, subject: e.subject }],
+        },
+        e.homieId,
+        {
+          kind: 'email_sent',
+          title: 'Email sent',
+          detail: `${e.to} · ${e.subject}`,
+          tone: 'info',
+        },
+      );
 
     case 'truck_dispatched':
       return {
@@ -204,14 +325,44 @@ function reduce(state: DemoState, e: HomieEvent): DemoState {
     case 'issue_resolved':
       return { ...state, resolvedIssues: [...state.resolvedIssues, e.issueId] };
 
-    case 'handoff':
-      return { ...state, activeHomie: e.toHomieId };
+    case 'handoff': {
+      const nextState = pushActivity(
+        pushActivity(
+          state,
+          e.fromHomieId,
+          {
+            kind: 'handoff_out',
+            title: 'Handed off task',
+            detail: `${e.toHomieId} · ${e.reason}`,
+            tone: 'warn',
+          },
+        ),
+        e.toHomieId,
+        {
+          kind: 'handoff_in',
+          title: 'Received handoff',
+          detail: `${e.fromHomieId} · ${e.reason}`,
+          tone: 'info',
+        },
+      );
+      return { ...nextState, activeHomie: e.toHomieId };
+    }
 
     case 'done':
-      return updateHomie(state, e.homieId, { status: 'done', summary: e.summary });
+      return pushActivity(state, e.homieId, {
+        kind: 'done',
+        title: 'Task completed',
+        detail: e.summary,
+        tone: 'success',
+      }, { status: 'done', summary: e.summary });
 
     case 'error':
-      return updateHomie(state, e.homieId, { status: 'error', summary: e.message });
+      return pushActivity(state, e.homieId, {
+        kind: 'error',
+        title: 'Execution error',
+        detail: e.message,
+        tone: 'danger',
+      }, { status: 'error', summary: e.message });
   }
 }
 
