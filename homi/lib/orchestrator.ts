@@ -10,6 +10,7 @@ import { runSato } from './agents/sato';
 import { INITIAL_ISSUES } from './data/issues';
 import { ISSUE_TYPES } from './data/issueTypes';
 import { PROPERTIES } from './data/properties';
+import { pickVendorForTrade } from './data/vendors';
 
 type Adapter = (ctx: DispatchContext) => AsyncGenerator<HomieEvent, void, void>;
 
@@ -63,6 +64,13 @@ function buildContext(dispatchId: string, issueId: string): DispatchContext | nu
   if (!issue) return null;
   const issueType = ISSUE_TYPES[issue.type];
   const property = PROPERTIES.find((p) => p.id === issue.propertyId);
+  // Pre-populate outcome with baseline vendor + price from the seeded vendor
+  // list. Ramirez and Park can refine these (real shortlist, negotiated price)
+  // but if they fail, downstream agents (Chen, Okafor, Brooks-write) still
+  // have sane values to act on — never $0 charges, never empty vendor names.
+  const baselineVendor = pickVendorForTrade(issueType.vendorTrade);
+  const DEFAULT_SAVINGS_CENTS = 8_000;
+  const baselinePriceCents = baselineVendor.baseQuote * 100 - DEFAULT_SAVINGS_CENTS;
   return {
     dispatchId,
     issueId,
@@ -70,7 +78,15 @@ function buildContext(dispatchId: string, issueId: string): DispatchContext | nu
     propertyAddress: property?.name ?? issue.propertyId,
     vendorTrade: issueType.vendorTrade,
     issueLabel: issueType.label,
-    outcome: {},
+    outcome: {
+      vendorId: baselineVendor.id,
+      vendorName: baselineVendor.name,
+      vendorPhone: baselineVendor.phone,
+      priceCents: baselinePriceCents,
+      etaText: 'today 3:40pm',
+      savingsCents: DEFAULT_SAVINGS_CENTS,
+      outcomeSource: 'fallback',
+    },
   };
 }
 

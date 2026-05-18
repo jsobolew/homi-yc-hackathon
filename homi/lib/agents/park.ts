@@ -144,7 +144,10 @@ export async function* runPark(
     clearTimeout(timeout);
   }
 
-  // Fetch final call detail to pick up recordingUrl (not in SSE stream).
+  // Fetch final call detail to pick up recordingUrl + any transcripts that
+  // arrived after the SSE stream closed. AgentPhone/Retell often finalizes
+  // STT a few seconds after `ended`, so short calls (~15-20s) miss live
+  // turn events. The call-detail endpoint has the canonical transcripts.
   try {
     const d = await getCall(callId);
     if (d.recordingUrl || d.recording_url) {
@@ -154,6 +157,34 @@ export async function* runPark(
         who: 'sys',
         text: `Recording: ${d.recordingUrl ?? d.recording_url}`,
       };
+    }
+    // Call-detail shape: transcripts: [{ transcript: <caller>, response: <agent>, createdAt }]
+    if (turns.length === 0 && Array.isArray(d.transcripts)) {
+      for (const entry of d.transcripts as {
+        transcript?: string;
+        response?: string;
+      }[]) {
+        const caller = String(entry.transcript ?? '').trim();
+        const agent = String(entry.response ?? '').trim();
+        if (agent) turns.push({ role: 'agent', content: agent });
+        if (caller) turns.push({ role: 'user', content: caller });
+      }
+      if (turns.length > 0) {
+        yield {
+          type: 'transcript_line',
+          homieId: 'park',
+          who: 'sys',
+          text: `(recovered ${turns.length} turns from call detail)`,
+        };
+        for (const t of turns) {
+          yield {
+            type: 'transcript_line',
+            homieId: 'park',
+            who: t.role === 'user' ? 'them' : 'you',
+            text: t.content,
+          };
+        }
+      }
     }
   } catch {
     // best effort — don't fail the whole run if detail fetch fails
