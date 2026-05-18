@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pixel } from '../Pixel';
-import { DEFAULT_PALETTE, MAP_MARKER_VARIANTS, SPR_VENDOR_OFFICE, VAN_SPRITES } from '../sprites';
+import { DEFAULT_PALETTE, MAP_MARKER_VARIANTS, VAN_SPRITES } from '../sprites';
 import type { Issue } from '@/lib/data/issues';
 import type { Property } from '@/lib/data/properties';
 import { VENDORS } from '@/lib/data/vendors';
@@ -131,25 +131,6 @@ function PropertyMarker({
             ✓
           </div>
         ) : null}
-      </div>
-    </div>
-  );
-}
-
-function VendorOffice({ vendor }: { vendor: (typeof VENDORS)[number] }) {
-  const point = projectVendorOffice(vendor);
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        left: point.x - 7,
-        top: point.y - 10,
-        width: 16,
-        height: 18,
-      }}
-    >
-      <div>
-        <Pixel sprite={SPR_VENDOR_OFFICE} scale={1.5} palette={DEFAULT_PALETTE} />
       </div>
     </div>
   );
@@ -381,10 +362,6 @@ export function MapView({ properties, issues, state, onSelectProperty }: MapView
             }}
           />
 
-          {VENDORS.map((vendor) => (
-            <VendorOffice key={vendor.id} vendor={vendor} />
-          ))}
-
           {properties.map((property) => {
             const point = propertyPoints.get(property.id);
             if (!point) return null;
@@ -458,9 +435,6 @@ export function MapView({ properties, issues, state, onSelectProperty }: MapView
         </span>
         <span>
           <span className="dot yellow"></span>&nbsp;property
-        </span>
-        <span>
-          <span className="dot green"></span>&nbsp;vendor office
         </span>
         <span>
           <span className="dot blue"></span>&nbsp;vendor enroute
