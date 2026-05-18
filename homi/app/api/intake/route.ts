@@ -20,15 +20,18 @@ interface AgentMailWebhook {
   };
 }
 
-// Map keywords found in the email to our issue types. First match wins.
+// Map keywords found in the email to our issue types. First match wins, so
+// order matters — put more-specific categories before broader ones (e.g.
+// appliance before security, so "broken oven" lands in appliance not security
+// via a bare "broken").
 const TYPE_KEYWORDS: { type: IssueTypeKey; words: RegExp }[] = [
-  { type: 'plumbing',   words: /\b(leak|leaking|water|pipe|plumb|toilet|sink|drain|flood)\b/i },
-  { type: 'electrical', words: /\b(power|outlet|electric|spark|breaker|flicker|wiring|lights?)\b/i },
-  { type: 'hvac',       words: /\b(heat|heating|cold|ac|a\/c|hvac|furnace|thermostat|cooling)\b/i },
-  { type: 'pest',       words: /\b(roach|mouse|mice|rat|bug|pest|ant|cockroach|infestation)\b/i },
-  { type: 'security',   words: /\b(lock|door|key|locked|jammed|break-?in|burglar)\b/i },
-  { type: 'cleaning',   words: /\b(dirty|trash|garbage|clean|cleaning|mold|smell)\b/i },
-  { type: 'appliance',  words: /\b(fridge|refrigerator|stove|oven|washer|dryer|appliance|dishwasher)\b/i },
+  { type: 'plumbing',   words: /\b(leak|leaking|water|pipe|plumb|toilet|sink|drain|flood|faucet|shower|bathtub)\b/i },
+  { type: 'hvac',       words: /\b(heat|heating|cold|ac|a\/c|hvac|furnace|thermostat|cooling|radiator|vent|air\s+conditioning)\b/i },
+  { type: 'electrical', words: /\b(power|outlet|electric|electrical|spark|breaker|flicker|wiring|lights?|lamp|fuse|circuit|socket)\b/i },
+  { type: 'pest',       words: /\b(roach|mouse|mice|rat|rats|bug|pest|ant|cockroach|infestation|termite|fly|mosquito)\b/i },
+  { type: 'appliance',  words: /\b(fridge|refrigerator|stove|oven|washer|dryer|appliance|dishwasher|microwave|freezer|disposal)\b/i },
+  { type: 'security',   words: /\b(lock|door|key|locked|jammed|break-?in|burglar|window|windows|glass|shattered|cracked|screen|fence|intruder|smashed)\b/i },
+  { type: 'cleaning',   words: /\b(dirty|trash|garbage|clean|cleaning|mold|smell|odor|stain)\b/i },
 ];
 
 function classifyType(text: string): IssueTypeKey {
