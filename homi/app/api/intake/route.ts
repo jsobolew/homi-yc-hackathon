@@ -87,7 +87,7 @@ export async function POST(req: Request) {
   const type = classifyType(text);
   const { floor, room } = classifyRoom(text);
 
-  const issue = addIssue({
+  const issue = await addIssue({
     id: nextIssueId(),
     propertyId,
     floor,

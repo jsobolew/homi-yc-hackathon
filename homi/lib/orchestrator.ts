@@ -59,8 +59,8 @@ async function runHomie(
   }
 }
 
-function buildContext(dispatchId: string, issueId: string): DispatchContext | null {
-  const issue = getIssue(issueId);
+async function buildContext(dispatchId: string, issueId: string): Promise<DispatchContext | null> {
+  const issue = await getIssue(issueId);
   if (!issue) return null;
   const issueType = ISSUE_TYPES[issue.type];
   const property = PROPERTIES.find((p) => p.id === issue.propertyId);
@@ -91,7 +91,7 @@ function buildContext(dispatchId: string, issueId: string): DispatchContext | nu
 }
 
 export async function run(dispatchId: string, issueId: string): Promise<void> {
-  const ctx = buildContext(dispatchId, issueId);
+  const ctx = await buildContext(dispatchId, issueId);
   if (!ctx) {
     emit(dispatchId, {
       type: 'error',
