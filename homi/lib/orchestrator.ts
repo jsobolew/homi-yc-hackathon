@@ -9,6 +9,7 @@ import { runRamirez } from './agents/ramirez';
 import { runSato } from './agents/sato';
 import { INITIAL_ISSUES } from './data/issues';
 import { ISSUE_TYPES } from './data/issueTypes';
+import { PROPERTIES } from './data/properties';
 
 type Adapter = (ctx: DispatchContext) => AsyncGenerator<HomieEvent, void, void>;
 
@@ -61,11 +62,15 @@ function buildContext(dispatchId: string, issueId: string): DispatchContext | nu
   const issue = INITIAL_ISSUES.find((i) => i.id === issueId);
   if (!issue) return null;
   const issueType = ISSUE_TYPES[issue.type];
+  const property = PROPERTIES.find((p) => p.id === issue.propertyId);
   return {
     dispatchId,
     issueId,
     propertyId: issue.propertyId,
+    propertyAddress: property?.name ?? issue.propertyId,
     vendorTrade: issueType.vendorTrade,
+    issueLabel: issueType.label,
+    outcome: {},
   };
 }
 

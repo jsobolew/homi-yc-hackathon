@@ -8,6 +8,11 @@ type Adapter = (ctx: DispatchContext) => AsyncGenerator<HomieEvent, void, void>;
 
 async function* mockRamirez(ctx: DispatchContext): AsyncGenerator<HomieEvent> {
   const vendor = pickVendorForTrade(ctx.vendorTrade as never);
+  // Populate ctx.outcome so downstream agents (Park live, Chen live, etc.)
+  // see the same vendor info they would from the live Ramirez.
+  ctx.outcome.vendorId = vendor.id;
+  ctx.outcome.vendorName = vendor.name;
+  ctx.outcome.vendorPhone = vendor.phone;
   yield { type: 'started', homieId: 'ramirez', task: `Sourcing ${ctx.vendorTrade} vendors`, issueId: ctx.issueId };
   await sleep(400);
 

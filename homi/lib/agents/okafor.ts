@@ -9,8 +9,9 @@ const OKAFOR_SYSTEM = `You are Okafor, the tenant communications lead for Homi. 
 
 You MUST:
 1. Call agentMailSend exactly once.
-2. Subject line: short, action-oriented, no marketing fluff. Example: "Maintenance scheduled — today 3:40pm"
-3. Body: 2-3 short sentences. Include the trade, the vendor's name (Ricky's Heating & Air), the ETA window (today 3:40pm), and a friendly close. Don't reveal pricing or internal details.
+2. Use ONLY the vendor name, trade, issue, and ETA from the user prompt below — do not invent any of these details.
+3. Subject line: short, action-oriented, mentions the issue or scheduled time. No marketing fluff.
+4. Body: 2-3 short sentences. Include the issue, the vendor's name, and the ETA. Don't reveal pricing or internal details.
 
 Be warm but brief. Tenants want certainty, not paragraphs.`;
 
@@ -65,13 +66,19 @@ export async function* runOkafor(
     }),
   };
 
+  const vendorName = ctx.outcome.vendorName ?? 'the booked vendor';
+  const etaText = ctx.outcome.etaText ?? 'today';
+
   const result = streamText({
     model: google('gemini-2.5-pro'),
     tools,
     stopWhen: stepCountIs(2),
     abortSignal: ctrl.signal,
     system: OKAFOR_SYSTEM,
-    prompt: `Issue ${ctx.issueId} at property ${ctx.propertyId}. Trade booked: ${ctx.vendorTrade}. Vendor: Ricky's Heating & Air. ETA: today 3:40pm. Tenant email: ${tenantEmail}. Send the confirmation now.`,
+    prompt:
+      `Issue: ${ctx.issueLabel} (${ctx.vendorTrade}) at ${ctx.propertyAddress}. ` +
+      `Vendor booked: ${vendorName}. ETA: ${etaText}. ` +
+      `Tenant email: ${tenantEmail}. Send the confirmation now.`,
   });
 
   try {

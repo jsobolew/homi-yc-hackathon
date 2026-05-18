@@ -8,10 +8,7 @@ const HOMIE_TIMEOUT_MS = 30_000;
 const CHEN_SYSTEM = `You are Chen, the payments lead for Homi. Park just negotiated a deal with the vendor. Your job is to pay them now via Stripe.
 
 You MUST:
-1. Call stripeChargeVendor exactly once with:
-   - amountCents: 64000 (Park booked the vendor for $640)
-   - vendorName: "Ricky's Heating & Air"
-   - memo: a short description including the trade and property
+1. Call stripeChargeVendor exactly once with the EXACT values from the user prompt — do not invent vendor names or amounts.
 2. After the charge, say "Paid." and nothing else.
 
 Do not call any other tool. Do not narrate. Just charge and confirm.`;
@@ -58,13 +55,21 @@ export async function* runChen(
     }),
   };
 
+  const vendorName = ctx.outcome.vendorName ?? 'Unknown Vendor';
+  const priceCents = ctx.outcome.priceCents ?? 64_000;
+  const dollars = (priceCents / 100).toFixed(2);
+
   const result = streamText({
     model: google('gemini-2.5-pro'),
     tools,
     stopWhen: stepCountIs(2),
     abortSignal: ctrl.signal,
     system: CHEN_SYSTEM,
-    prompt: `Issue ${ctx.issueId} at property ${ctx.propertyId}. Trade: ${ctx.vendorTrade}. Pay Ricky's Heating & Air $640 now.`,
+    prompt:
+      `Pay ${vendorName} $${dollars} now. ` +
+      `Call stripeChargeVendor with: ` +
+      `amountCents=${priceCents}, vendorName="${vendorName}", ` +
+      `memo="${ctx.vendorTrade} job at ${ctx.propertyAddress} (issue ${ctx.issueId})".`,
   });
 
   try {
