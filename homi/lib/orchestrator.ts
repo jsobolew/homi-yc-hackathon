@@ -7,7 +7,7 @@ import { runOkafor } from './agents/okafor';
 import { runPark } from './agents/park';
 import { runRamirez } from './agents/ramirez';
 import { runSato } from './agents/sato';
-import { INITIAL_ISSUES } from './data/issues';
+import { getIssue } from './data/issuesStore';
 import { ISSUE_TYPES } from './data/issueTypes';
 import { PROPERTIES } from './data/properties';
 import { pickVendorForTrade } from './data/vendors';
@@ -59,8 +59,8 @@ async function runHomie(
   }
 }
 
-function buildContext(dispatchId: string, issueId: string): DispatchContext | null {
-  const issue = INITIAL_ISSUES.find((i) => i.id === issueId);
+async function buildContext(dispatchId: string, issueId: string): Promise<DispatchContext | null> {
+  const issue = await getIssue(issueId);
   if (!issue) return null;
   const issueType = ISSUE_TYPES[issue.type];
   const property = PROPERTIES.find((p) => p.id === issue.propertyId);
@@ -91,7 +91,7 @@ function buildContext(dispatchId: string, issueId: string): DispatchContext | nu
 }
 
 export async function run(dispatchId: string, issueId: string): Promise<void> {
-  const ctx = buildContext(dispatchId, issueId);
+  const ctx = await buildContext(dispatchId, issueId);
   if (!ctx) {
     emit(dispatchId, {
       type: 'error',
