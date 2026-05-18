@@ -19,11 +19,9 @@ Be terse. Be useful. The negotiator's call is waiting on you.`;
 
 const BROOKS_WRITE_SYSTEM = `You are Brooks, the long-term memory keeper for Homi. The dispatch is complete. Your job RIGHT NOW is to persist the outcome to memory so future agents can recall it.
 
-You MUST call supermemoryWrite exactly once with:
-- key: a stable identifier in the form deal.<propertyId>.<vendorTrade>.<YYYY-MM-DD>
-- value: a one-line summary including vendor name, final price, how fast they responded, and savings vs prior market.
+You MUST call supermemoryWrite exactly once. The user prompt gives you the EXACT key to use — pass it verbatim, do not modify it, do not invent a new one based on prior memories you've seen.
 
-Use the date 2026-05-17. Make it concise. Do not call any other tool.`;
+For the value: a one-line summary including vendor name, final price, how fast they responded, and savings vs prior market. Concise. Do not call any other tool.`;
 
 export async function* runBrooksRead(
   ctx: DispatchContext,
@@ -68,7 +66,10 @@ export async function* runBrooksRead(
     stopWhen: stepCountIs(3),
     abortSignal: ctrl.signal,
     system: BROOKS_READ_SYSTEM,
-    prompt: `Issue ${ctx.issueId} at property ${ctx.propertyId}. Trade needed: ${ctx.vendorTrade}. Search memory for any prior deals in this trade and brief Park before the negotiation call.`,
+    prompt:
+      `Issue ${ctx.issueId} (${ctx.issueLabel}) at ${ctx.propertyAddress}. ` +
+      `Trade needed: ${ctx.vendorTrade}. ` +
+      `Search memory for any prior deals in this trade and brief Park before the negotiation call.`,
   });
 
   try {
@@ -162,13 +163,32 @@ export async function* runBrooksWrite(
     }),
   };
 
+  const vendorName = ctx.outcome.vendorName ?? 'Unknown Vendor';
+  const priceDollars = ((ctx.outcome.priceCents ?? 0) / 100).toFixed(0);
+  const savingsDollars = ((ctx.outcome.savingsCents ?? 0) / 100).toFixed(0);
+  const eta = ctx.outcome.etaText ?? 'same-day';
+
+  // Build the archive key in code so the LLM can't pollute it with addresses
+  // from prior memory_read results. Pass it as a literal Brooks must copy.
+  const dateIso = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const dealKey = `deal.${ctx.propertyId}.${ctx.vendorTrade}.${dateIso}`;
+
   const result = streamText({
     model: google('gemini-2.5-pro'),
     tools,
     stopWhen: stepCountIs(2),
     abortSignal: ctrl.signal,
     system: BROOKS_WRITE_SYSTEM,
-    prompt: `Issue ${ctx.issueId} resolved at property ${ctx.propertyId}. Trade: ${ctx.vendorTrade}. Park booked the vendor (Ricky's Heating & Air) for $640, same-day response, saved $80 vs market. Write this to memory now.`,
+    prompt:
+      `Use this EXACT key (copy verbatim, do not change): ${dealKey}\n\n` +
+      `Compose the value summary from these facts:\n` +
+      `- Issue: ${ctx.issueId} (${ctx.issueLabel}) at ${ctx.propertyAddress}\n` +
+      `- Trade: ${ctx.vendorTrade}\n` +
+      `- Vendor: ${vendorName}\n` +
+      `- Price: $${priceDollars}\n` +
+      `- ETA: ${eta}\n` +
+      `- Savings vs market: $${savingsDollars}\n\n` +
+      `Call supermemoryWrite with key="${dealKey}" and a one-line value.`,
   });
 
   try {

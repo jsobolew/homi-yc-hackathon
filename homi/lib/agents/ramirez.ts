@@ -72,6 +72,14 @@ export async function* runRamirez(
     };
   }
 
+  // Record the chosen vendor for downstream agents. (Even when Browser Use
+  // returns something useful, we currently fall back to the seeded vendor
+  // list — the live search is demo flavor; the seeded vendor is the source
+  // of truth for the rest of the chain.)
+  ctx.outcome.vendorId = vendor.id;
+  ctx.outcome.vendorName = vendor.name;
+  ctx.outcome.vendorPhone = vendor.phone;
+
   yield {
     type: 'memory_write',
     homieId: 'ramirez',

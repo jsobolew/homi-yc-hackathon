@@ -89,9 +89,15 @@ export default function Home() {
     setView('map');
   }
 
-  const homieIssue = officeHomie
-    ? issues.find((i) => i.assignedHomie === officeHomie.id || i.id === officeHomie.issueId) || null
-    : null;
+  // When a dispatch is active, every homie panel should show the dispatched
+  // issue (they're all working on it). Only fall back to the per-homie demo
+  // flavor (homies.ts → issueId) when no dispatch is in flight.
+  const homieIssue =
+    (state.issueId && issues.find((i) => i.id === state.issueId)) ||
+    (officeHomie
+      ? issues.find((i) => i.assignedHomie === officeHomie.id || i.id === officeHomie.issueId)
+      : null) ||
+    null;
   const homieIssueProperty = homieIssue
     ? PROPERTIES.find((p) => p.id === homieIssue.propertyId) || null
     : null;

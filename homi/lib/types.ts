@@ -42,9 +42,24 @@ export interface Dispatch {
   status: 'running' | 'done' | 'error';
 }
 
+export interface DispatchOutcome {
+  vendorId?: string;
+  vendorName?: string;
+  vendorPhone?: string;
+  priceCents?: number;
+  etaText?: string;
+  savingsCents?: number;
+  vendorConfirmed?: boolean;
+  outcomeSource?: 'parsed' | 'fallback' | 'mixed';
+}
+
 export interface DispatchContext {
   dispatchId: DispatchId;
   issueId: string;
   propertyId: string;
+  propertyAddress: string;
   vendorTrade: string;
+  issueLabel: string; // e.g. "Broken pipe", "Heating out"
+  // Mutable, shared across the chain. Each agent reads/writes as it learns.
+  outcome: DispatchOutcome;
 }

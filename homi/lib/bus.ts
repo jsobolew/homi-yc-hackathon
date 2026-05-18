@@ -29,6 +29,12 @@ export function emit(dispatchId: string, e: HomieEvent): void {
   if (!b) return;
   b.buffer.push(e);
   b.emitter.emit('e', e);
+  // Server-side audit log — keeps a chronological record of every dispatch's
+  // events in the dev server log so we can analyze a run after the fact.
+  if (process.env.HOMI_LOG_EVENTS !== '0') {
+    const elapsed = Date.now() - b.dispatch.startedAt;
+    console.log(`[bus ${dispatchId.slice(0, 8)} +${String(elapsed).padStart(6)}ms] ${JSON.stringify(e)}`);
+  }
 }
 
 export function subscribe(
