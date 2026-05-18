@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Pixel } from '@/components/Pixel';
 import { DEFAULT_PALETTE, SPR_LOGO } from '@/components/sprites';
 import { MapView } from '@/components/views/MapView';
@@ -13,6 +13,13 @@ import { INITIAL_ISSUES, type Issue } from '@/lib/data/issues';
 import { INITIAL_HOMIES, type Homie } from '@/lib/data/homies';
 import type { HomieId } from '@/lib/types';
 
+interface IntakeBanner {
+  issueId: string;
+  propertyName: string;
+  from: string;
+  subject: string;
+}
+
 type View = 'map' | 'building' | 'office';
 type OfficeMode = 'preview' | 'live';
 
@@ -23,12 +30,68 @@ export default function Home() {
   const [officeMode, setOfficeMode] = useState<OfficeMode>('preview');
   const [homies] = useState<Homie[]>(INITIAL_HOMIES);
   const [dispatchedIssues, setDispatchedIssues] = useState<Record<string, string>>({});
+  const [baseIssues, setBaseIssues] = useState<Issue[]>(INITIAL_ISSUES);
+  const [intakeBanner, setIntakeBanner] = useState<IntakeBanner | null>(null);
+  const knownIssueIds = useRef(new Set<string>(INITIAL_ISSUES.map((i) => i.id)));
 
   const { state, start, reset } = useEvents();
   const palette = DEFAULT_PALETTE;
+
+  useEffect(() => {
+    const es = new EventSource('/api/issues/stream');
+
+    es.addEventListener('snapshot', (m) => {
+      try {
+        const { issues } = JSON.parse((m as MessageEvent).data) as { issues: Issue[] };
+        if (Array.isArray(issues)) {
+          for (const issue of issues) knownIssueIds.current.add(issue.id);
+          setBaseIssues(issues);
+        }
+      } catch {
+        // ignore parse errors
+      }
+    });
+
+    es.onmessage = (m) => {
+      try {
+        const payload = JSON.parse(m.data) as { type: string; issue?: Issue };
+        if (payload.type === 'new_issue' && payload.issue) {
+          const issue = payload.issue;
+          if (knownIssueIds.current.has(issue.id)) return;
+          knownIssueIds.current.add(issue.id);
+          setBaseIssues((prev) => [...prev, issue]);
+          const property = PROPERTIES.find((p) => p.id === issue.propertyId);
+          setIntakeBanner({
+            issueId: issue.id,
+            propertyName: property?.name ?? issue.propertyId,
+            from: issue.intake?.from ?? 'tenant',
+            subject: issue.intake?.subject ?? 'New issue',
+          });
+        }
+      } catch {
+        // ignore parse errors
+      }
+    };
+
+    es.onerror = () => {
+      // Let the browser retry; just close so we don't leak.
+      es.close();
+    };
+
+    return () => {
+      es.close();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!intakeBanner) return;
+    const id = setTimeout(() => setIntakeBanner(null), 8000);
+    return () => clearTimeout(id);
+  }, [intakeBanner]);
+
   const issues = useMemo<Issue[]>(
     () =>
-      INITIAL_ISSUES.map((issue) => {
+      baseIssues.map((issue) => {
         if (state.resolvedIssues.includes(issue.id)) {
           return { ...issue, status: 'resolved' };
         }
@@ -37,7 +100,7 @@ export default function Home() {
         }
         return issue;
       }),
-    [dispatchedIssues, state.resolvedIssues],
+    [baseIssues, dispatchedIssues, state.resolvedIssues],
   );
 
   const selectedProperty = useMemo(
@@ -164,6 +227,45 @@ export default function Home() {
           </button>
         </div>
       </div>
+
+      {intakeBanner && (
+        <div
+          onClick={() => {
+            const issue = baseIssues.find((i) => i.id === intakeBanner.issueId);
+            if (issue) selectProperty(issue.propertyId);
+            setIntakeBanner(null);
+          }}
+          style={{
+            position: 'absolute',
+            top: 60,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 100,
+            background: '#1a1326',
+            border: '2px solid #ffd966',
+            boxShadow: '4px 4px 0 rgba(0,0,0,0.6)',
+            padding: '10px 16px',
+            cursor: 'pointer',
+            fontFamily: 'Press Start 2P, monospace',
+            fontSize: 9,
+            color: '#fff1d1',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+            maxWidth: 520,
+          }}
+        >
+          <div style={{ color: '#ffd966' }}>
+            ✉  NEW ISSUE · {intakeBanner.propertyName.toUpperCase()}
+          </div>
+          <div style={{ fontSize: 8, color: '#fff1d1', opacity: 0.9 }}>
+            from {intakeBanner.from} — {intakeBanner.subject}
+          </div>
+          <div style={{ fontSize: 8, color: '#6cc24a', marginTop: 2 }}>
+            → click to open property
+          </div>
+        </div>
+      )}
 
       <div className="stage">
         {view === 'map' && (
